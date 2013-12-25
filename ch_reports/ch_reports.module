@@ -1,0 +1,525 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_menu()
+ */
+function ch_reports_menu() {
+  $items['admin/reports/donations'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => t('Donations Report'),
+    'page callback' => 'ch_reports_donations',
+    'access arguments' => array('view reports'),
+  );
+  $items['admin/reports/subscriptions'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => t('Subscriptions Report'),
+    'page callback' => 'ch_reports_subscriptions',
+    'access arguments' => array('view reports'),
+  );
+  $items['admin/reports/origin'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => t('Origin Code Report'),
+    'page callback' => 'ch_reports_origin',
+    'access arguments' => array('view reports'),
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme();
+ */
+function ch_reports_theme() {
+  return array(
+    'ch_reports_table' => array(
+      'arguments' => array('table' => array()),
+    ),
+    'ch_reports_csv' => array(
+      'arguments' => array('table' => array()),
+    ),
+  );
+}
+
+function ch_reports_donations(  ) {
+  $args = func_get_args();
+  foreach ( $args as $arg ) {
+    if ( is_numeric($arg) ) {
+      if (!isset($page)) { $page = $arg; }
+    } else {
+      if (!isset($format)) { $format = $arg; }
+    }
+  }
+  if ( !isset($page) ) { $page = 1; }
+  if ( !isset($format) ) { $format = 'table'; }
+    
+  $head = array(
+    array( 'data' => t('Order ID'), 'field' => 'order_id' ),
+    array( 'data' => t('Type') ),
+    array( 'data' => t('Amount'), 'field' => 'order_total' ),
+    array( 'data' => t('Donor First Name'), 'field' => 'delivery_first_name' ),
+    array( 'data' => t('Donor Last Name'), 'field' => 'delivery_last_name' ),
+    array( 'data' => t('Donor Address') ),
+    array( 'data' => t('Donor Address 2') ),
+    array( 'data' => t('Donor City'), 'field' => 'delivery_city' ),
+    array( 'data' => t('Donor State'), 'field' => 'delivery_zone' ),
+    array( 'data' => t('Donor Postal Code'), 'field' => 'delivery_postal_code' ),
+    array( 'data' => t('Donor Country'), 'field' => 'delivery_country' ),
+    array( 'data' => t('Donor Phone') ),
+    array( 'data' => t('Donor Email'), 'field' => 'primary_email' ),
+    array( 'data' => t('Billing First Name'), 'field' => 'billing_first_name' ),
+    array( 'data' => t('Billing Last Name'), 'field' => 'billing_last_name' ),
+    array( 'data' => t('Billing Address') ),
+    array( 'data' => t('Billing Address 2') ),
+    array( 'data' => t('Billing City'), 'field' => 'billing_city' ),
+    array( 'data' => t('Billing State'), 'field' => 'billing_zone' ),
+    array( 'data' => t('Billing Postal Code'), 'field' => 'billing_postal_code' ),
+    array( 'data' => t('Billing Country'), 'field' => 'billing_country' ),
+    array( 'data' => t('Gift Type') ),
+    array( 'data' => t('Memorial Name') ),
+    array( 'data' => t('Honor Name') ),
+    array( 'data' => t('Send Acknowledgement') ),
+    array( 'data' => t('Acknowledgement First Name') ),
+    array( 'data' => t('Acknowledgement Last Name') ),
+    array( 'data' => t('Acknowledgement Email') ),
+    array( 'data' => t('Acknowledgement Address') ),
+    array( 'data' => t('Acknowledgement Address 2') ),
+    array( 'data' => t('Acknowledgement City') ),
+    array( 'data' => t('Acknowledgement State') ),
+    array( 'data' => t('Acknowledgement Postal Code') ),
+    array( 'data' => t('Acknowledgement Country') ),
+    array( 'data' => t('Paypal Reference ID') ),
+    array( 'data' => t('Paid with Paypal') ),
+    array( 'data' => t('Origin Code'), 'field' => 'origin' ),
+    array( 'data' => t('Timestamp'), 'field' => 'created', 'sort' => 'desc' ),
+    array( 'data' => t('IP Address') ),
+    array( 'data' => t('Card Type') ),
+  );
+  
+  $rows = array();
+  $start = $end = '';
+  $params = array(time(), 'completed');
+  if ( $_REQUEST['start'] ) {
+    $start = ' AND created >= %d';
+    $params[] = strtotime($_REQUEST['start']);
+  }
+  if ( $_REQUEST['end'] ) {
+    $end = ' AND created <= %d';
+    $params[] = strtotime($_REQUEST['end']." +1 day");
+  }
+  if ( $_REQUEST['oc'] ) {
+    $origin = " AND oo.origin = '%s'";
+    $params[] = $_REQUEST['oc'];
+  }
+  
+  $sql = "SELECT o.order_id, GROUP_CONCAT(oo.origin ORDER BY oo.origin ASC SEPARATOR '|') AS origin FROM {uc_orders} o LEFT JOIN {ch_order_origin} oo ON o.order_id=oo.order_id WHERE o.product_count>0 AND o.order_total>0 AND o.created<=%d AND o.order_status='%s'".$start.$end.$origin." GROUP BY o.order_id";
+  $count = "SELECT COUNT(*) FROM {uc_orders} o WHERE o.product_count>0 AND o.order_total>0 AND o.created<=%d AND o.order_status='%s'".$start.$end.$origin;
+  
+  if ( $format == 'csv' ) {
+    $result = db_query($sql, $params);
+  } else {
+    $limit = 20;
+    $tablesort = tablesort_sql($head);
+    $result = pager_query($sql.$tablesort, $limit, 0, $count, $params);
+  }
+  
+  while ( $record = db_fetch_object($result) ) {
+    $order = uc_order_load($record->order_id);
+    $row = array();
+    $row['order_id'] = $order->order_id;
+    if ( $format == 'table' ) { $row['order_id'] = l($order->order_id, 'admin/store/orders/'.$order->order_id); }
+    $row['type'] = ch_reports_order_type($order);
+    $row['amount'] = $order->order_total;
+    $row['delivery_first_name'] = $order->delivery_first_name?$order->delivery_first_name:$order->billing_first_name;
+    $row['delivery_last_name'] = $order->delivery_last_name?$order->delivery_last_name:$order->billing_last_name;
+    $row['delivery_street1'] = $order->delivery_street1?$order->delivery_street1:$order->billing_street1;
+    $row['delivery_street2'] = $order->delivery_street2?$order->delivery_street2:$order->billing_street2;
+    $row['delivery_city'] = $order->delivery_city?$order->delivery_city:$order->billing_city;
+    $row['delivery_zone'] = $order->delivery_zone?db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = %d", $order->delivery_zone)):db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = %d", $order->billing_zone));
+    $row['delivery_postal_code'] = $order->delivery_postal_code?$order->delivery_postal_code:$order->billing_postal_code;
+    $row['delivery_country'] = $order->delivery_country?uc_country_get_by_id($order->delivery_country):uc_country_get_by_id($order->billing_country);
+    $row['delivery_phone'] = $order->delivery_phone;
+    $row['primary_email'] = $order->primary_email;
+    $row['billing_first_name'] = $order->billing_first_name;
+    $row['billing_last_name'] = $order->billing_last_name;
+    $row['billing_street1'] = $order->billing_street1;
+    $row['billing_street2'] = $order->billing_street2;
+    $row['billing_city'] = $order->billing_city;
+    $row['billing_zone'] = db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = %d", $order->billing_zone));
+    $row['billing_postal_code'] = $order->billing_postal_code;
+    $row['billing_country'] = uc_country_get_by_id($order->billing_country);
+    $row['gift_type'] = $order->data['donation_type'];
+    $row['memorial_name'] = ($row['gift_type']=='memory')?$order->data['tributee']:'';
+    $row['honor_name'] = ($row['gift_type']=='honor')?$order->data['tributee']:'';
+    $row['send_ack'] = isset($order->data['acknowledgement'])?1:0;
+    $row['ack_firstname'] = $order->data['acknowledgement']['first_name'];
+    $row['ack_lastname'] = $order->data['acknowledgement']['last_name'];
+    $row['ack_email'] = $order->data['acknowledgement']['email'];
+    $row['ack_address1'] = $order->data['acknowledgement']['street1'];
+    $row['ack_address2'] = $order->data['acknowledgement']['street2'];
+    $row['ack_city'] = $order->data['acknowledgement']['city'];
+    $row['ack_state'] = $row['send_ack']?db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = %d", $order->data['acknowledgement']['zone'])):'';
+    $row['ack_postal'] = $order->data['acknowledgement']['postal_code'];
+    $row['ack_country'] =$order->data['acknowledgement']['country'];
+    $row['pnref'] = '';
+    $payments = uc_payment_load_payments($order->order_id);
+    if ( $payments ) { // Payflow Pro
+      $row['pnref'] = array();
+      foreach ( $payments as $payment ) {
+        $payment->data = unserialize($payment->data);
+        if ( $payment->data['pnref'] ) {
+          $row['pnref'][] = $payment->data['pnref'];
+        }
+      }
+      $row['pnref'] = implode(', ', $row['pnref']);
+    } elseif ( $order->data['pnref'] ) { // Website Payments Pro
+      $row['pnref'] = $order->data['pnref'];
+    }
+    $row['paypal'] = $order->payment_method=='paypal_ec'?'Yes':'No';
+    $row['origin'] = $record->origin;
+    $row['timestamp'] = date('Y-m-d H:i:s', $order->created);
+    $row['ip'] = $order->host;
+    $row['donor_card_type'] = $order->payment_details['cc_type']?$order->payment_details['cc_type']:$order->data['cc_type'];
+    
+    $rows[] = $row;
+  }
+  
+  switch ( $format ) {
+    case 'csv':
+      drupal_set_header("Cache-Control: no-store, no-cache, must-revalidate");
+      drupal_set_header("Content-type: application/csv");
+      drupal_set_header("Content-Disposition: attachment; filename=\"ch_donations.csv\"");
+      print theme('ch_reports_csv', $head, $rows);
+      exit;
+    default:
+      $query = array();
+      if ( $_REQUEST['start'] ) { $query['start'] = $_REQUEST['start']; }
+      if ( $_REQUEST['end'] ) { $query['end'] = $_REQUEST['end']; }
+      global $pager_total_items;
+      $summary = '<h3>Displaying '.$pager_total_items[0].' records</h3>';
+      if ( $pager_total_items[0] > 0 ) {
+        $page = $_REQUEST['page'] > 0?(int)$_REQUEST['page']+1:1;
+        $top = $page*$limit;
+        $bottom = $top-$limit+1;
+        if ( $top > $pager_total_items[0] ) {
+          $top = $pager_total_items[0];
+        }
+        $summary = '<h3>Displaying '.$bottom.'-'.$top.' of '.$pager_total_items[0].' records</h3>';
+      }
+      drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+      return $summary.'<p>'.l(t('Download as CSV'), 'admin/reports/donations/csv', array('query' => $query)).'</p>'.ch_reports_time_range_form().theme('table', $head, $rows).theme('pager', NULL, $limit, 0, NULL, 5);
+      break;
+  }
+  return '';
+}
+
+function ch_reports_time_range_form() {
+  $form = '<form id="ch-reports-time-range" method="get" accept-charset="UTF-8" action="">';
+  $form .= '<div>';
+  
+  $form .= '<div id="edit-start-wrapper" class="form-item">';
+  $form .= '<label for="edit-start">Start: </label>';
+  $form .= '<input id="edit-start" class="form-text" type="text" value="" size="60" name="start" maxlength="128"/>';
+  $form .= '<div class="description">Enter a date in (YYYY-MM-DD) format</div>';
+  $form .= '</div>';
+  
+  $form .= '<div id="edit-end-wrapper" class="form-item">';
+  $form .= '<label for="edit-end">End: </label>';
+  $form .= '<input id="edit-end" class="form-text" type="text" value="" size="60" name="end" maxlength="128"/>';
+  $form .= '<div class="description">Enter a date in (YYYY-MM-DD) format</div>';
+  $form .= '</div>';
+  
+  $form .= '<input id="edit-submit" class="form-submit" type="submit" value="Filter" />';
+  
+  if ( $_REQUEST['sort'] ) {
+    $form .= '<input type="hidden" name="sort" value="'.$_REQUEST['sort'].'">';
+  }
+  if ( $_REQUEST['order'] ) {
+    $form .= '<input type="hidden" name="order" value="'.$_REQUEST['order'].'">';
+  }
+  
+  $form .= '</div>';
+  $form .= '</form>';
+  return $form;
+}
+
+function ch_reports_subscriptions(  ) {
+  $args = func_get_args();
+  foreach ( $args as $arg ) {
+    if ( is_numeric($arg) ) {
+      if (!isset($page)) { $page = $arg; }
+    } else {
+      if (!isset($format)) { $format = $arg; }
+    }
+  }
+  if ( !isset($page) ) { $page = 1; }
+  if ( !isset($format) ) { $format = 'table'; }
+  
+  $head = array(
+    array( 'data' => t('First Name'), 'field' => 'first_name' ),
+    array( 'data' => t('Last Name'), 'field' => 'last_name' ),
+    array( 'data' => t('Email Address'), 'field' => 'email' ),
+    array( 'data' => t('Postal Code'), 'field' => 'postal_code' ),
+    array( 'data' => t('Newsletter'), 'field' => 'title' ),
+    array( 'data' => t('Origin Code'), 'field' => 'origin' ),
+    array( 'data' => t('Timestamp'), 'field' => 'created', 'sort' => 'desc' ),
+  );
+  
+  $rows = array();
+  $start = $end = '';
+  $params = array();
+  if ( $_REQUEST['start'] ) {
+    $start = ' AND s.created >= %d';
+    $params[] = strtotime($_REQUEST['start']);
+  }
+  if ( $_REQUEST['end'] ) {
+    $end = ' AND s.created <= %d';
+    $params[] = strtotime($_REQUEST['end'])+86400;
+  }
+  
+  $sql = "SELECT s.first_name, s.last_name, s.email, s.postal_code, n.title, s.origin, s.created FROM {ch_subscriptions} s LEFT JOIN {node} n ON s.newsletter=n.nid WHERE nid>0".$start.$end;
+  $count = "SELECT COUNT(*) FROM {ch_subscriptions} s LEFT JOIN {node} n ON s.newsletter=n.nid WHERE nid>0".$start.$end;
+  
+  if ( $format == 'csv' ) {
+    $result = db_query($sql, $params);
+  } else {
+    $limit = 20;
+    $tablesort = tablesort_sql($head);
+    $result = pager_query($sql.$tablesort, $limit, 0, $count, $params);
+  }
+  
+  while ( $record = db_fetch_array($result) ) {
+    $record['created'] = date('Y-m-d H:i', $record['created']);
+    $rows[] = $record;
+  }
+  
+  switch ( $format ) {
+    case 'csv':
+      drupal_set_header("Cache-Control: no-store, no-cache, must-revalidate");
+      drupal_set_header("Content-type: application/csv");
+      drupal_set_header("Content-Disposition: attachment; filename=\"ch_donations.csv\"");
+      print theme('ch_reports_csv', $head, $rows);
+      exit;
+    default:
+      $query = array();
+      if ( $_REQUEST['start'] ) { $query['start'] = $_REQUEST['start']; }
+      if ( $_REQUEST['end'] ) { $query['end'] = $_REQUEST['end']; }
+      global $pager_total_items;
+      $summary = '<h3>Displaying '.$pager_total_items[0].' records</h3>';
+      if ( $pager_total_items[0] > 0 ) {
+        $page = $_REQUEST['page'] > 0?(int)$_REQUEST['page']+1:1;
+        $top = $page*$limit;
+        $bottom = $top-$limit+1;
+        $summary = '<h3>Displaying '.$bottom.'-'.$top.' of '.$pager_total_items[0].' records</h3>';
+      }
+      drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+      return $summary.'<p>'.l(t('Download as CSV'), 'admin/reports/subscriptions/csv', array('query' => $query)).'</p>'.ch_reports_time_range_form().theme('table', $head, $rows).theme('pager', NULL, $limit, 0, NULL, 5);
+      break;
+  }
+  return '';
+}
+
+/**
+ * What type of order is it?
+ * return "single", "recurring", or "ecard"
+ * @comment Modified by Richard Castera on 12-1-2009. Added the listing og gift_items node type to the report.
+ */
+function ch_reports_order_type( $order ) {
+  foreach ( $order->products as $product ) {
+    $node = node_load($product->nid);
+    if ( $node->type == 'donation_monthly' ) {
+      return 'recurring';
+    } elseif ( $node->type == 'ecard' ) {
+      return 'ecard';
+    } elseif ( $node->type == 'gift_item' ) {
+      return 'catalog';
+    }
+  }
+  return 'single';
+}
+
+function theme_ch_reports_table( $table ) {
+  $out = '';
+  $out .= '<table class="report">';
+  if ( $table['#columns'] ) {
+    $out .= '<thead><tr>';
+    foreach ( $table['#columns'] as $field ) {
+      $out .= '<th>'.$field.'</th>';
+    }
+    $out .= '</tr></thead>';
+  }
+  $out .= '<tbody>';
+  $zebra = 'odd';
+  foreach ( $table['#rows'] as $row ) {
+    $out .= '<tr class="'.$zebra.'">';
+    foreach ( $table['#columns'] as $field ) {
+      $out .= '<td>'.$row[$field].'</td>';
+    }
+    $out .= '</tr>';
+    $zebra = ($zebra=='odd')?'even':'odd';
+  }
+  $out .= '</tbody>';
+  $out .= '</table>';
+  return $out;
+}
+function theme_ch_reports_csv( $head, $rows ) {
+  $header_row = array();
+  foreach ( $head as $field ) {
+    $header_row[] = $field['data'];
+  }
+  $out = str_putcsv($header_row)."\n";
+  $records = array();
+  foreach ( $rows as $row ) {
+    $out .= str_putcsv($row)."\n";
+  }
+  return $out;
+}
+
+function ch_reports_origin(  ) {
+  $args = func_get_args();
+  foreach ( $args as $arg ) {
+    if ( is_numeric($arg) ) {
+      if (!isset($page)) { $page = $arg; }
+    } else {
+      if (!isset($format)) { $format = $arg; }
+    }
+  }
+  if ( !isset($page) ) { $page = 1; }
+  if ( !isset($format) ) { $format = 'table'; }
+  
+  /**
+   * @comment Modified by Richard Castera on 12-1-2009. Added sorting functionality to the fields below.
+   **/  
+  $head = array(
+    array( 'data' => t('Origin Code'), 'field' => 'oo.origin' ),
+    array( 'data' => t('Number of Orders'), 'field' => 'number_of_orders' ),
+    array( 'data' => t('Total Revenue'), 'field' => 'total_revenue' ),
+  );
+  
+  $rows = array();
+  $start = $end = '';
+  $params = array();
+  if ( $_REQUEST['start'] ) {
+    $start = ' AND o.created >= %d';
+    $params[] = strtotime($_REQUEST['start']);
+  }
+  if ( $_REQUEST['end'] ) {
+    $end = ' AND o.created <= %d';
+    $params[] = strtotime($_REQUEST['end']." +1 day");
+  }
+  
+  $sql = "SELECT oo.origin , COUNT(*) as number_of_orders, SUM(o.order_total) as total_revenue FROM {ch_order_origin} oo INNER JOIN {uc_orders} o ON oo.order_id=o.order_id WHERE oo.secondary=0".$start.$end." GROUP BY oo.origin";
+  $count = "SELECT COUNT(DISTINCT oo.origin) FROM {ch_order_origin} oo INNER JOIN {uc_orders} o ON oo.order_id=o.order_id WHERE oo.secondary=0".$start.$end;
+  
+  if ( $format == 'csv' ) {
+    $result = db_query($sql, $params);
+  } else {
+    $limit = 20;
+    $tablesort = tablesort_sql($head);
+    $result = pager_query($sql.$tablesort, $limit, 0, $count, $params);
+  }
+  
+  while ( $record = db_fetch_array($result) ) {
+    if ( $_REQUEST['start'] ) { $query['start'] = $_REQUEST['start']; }
+    if ( $_REQUEST['end'] ) { $query['end'] = $_REQUEST['end']; }
+    $query['oc'] = $record['origin'];
+    $record['origin'] = l($record['origin'], 'admin/reports/donations', array('query' => $query));
+    $record['total_revenue'] = sprintf('%0.2f', $record['total_revenue']);
+    $rows[] = $record;
+  }
+  
+  switch ( $format ) {
+    case 'csv':
+      drupal_set_header("Cache-Control: no-store, no-cache, must-revalidate");
+      drupal_set_header("Content-type: application/csv");
+      drupal_set_header("Content-Disposition: attachment; filename=\"ch_donations.csv\"");
+      print theme('ch_reports_csv', $head, $rows);
+      exit;
+    default:
+      $query = array();
+      if ( $_REQUEST['start'] ) { $query['start'] = $_REQUEST['start']; }
+      if ( $_REQUEST['end'] ) { $query['end'] = $_REQUEST['end']; }
+      global $pager_total_items;
+      $summary = '<h3>Displaying '.$pager_total_items[0].' records</h3>';
+      if ( $pager_total_items[0] > 0 ) {
+        $page = $_REQUEST['page'] > 0?(int)$_REQUEST['page']+1:1;
+        $top = $page*$limit;
+        $bottom = $top-$limit+1;
+        if ( $top > $pager_total_items[0] ) {
+          $top = $pager_total_items[0];
+        }
+        $summary = '<h3>Displaying '.$bottom.'-'.$top.' of '.$pager_total_items[0].' records</h3>';
+      }
+      return $summary.'<p>'.l(t('Download as CSV'), 'admin/reports/origin/csv', array('query' => $query)).'</p>'.ch_reports_time_range_form().theme('table', $head, $rows).theme('pager', NULL, $limit, 0, NULL, 5);
+      break;
+  }
+  return '';
+}
+
+
+/**
+ * Implementation of hook_order()
+ * Make sure to log the credit card type for credit orders
+ */
+function ch_reports_order($op, &$arg1, $arg2) {
+  switch ( $op ) {
+    case "save":
+      if ($arg1->payment_method == 'credit') {
+        if (!empty($arg1->payment_details)) {
+          if ( strlen($arg1->payment_details['cc_type']) > 1 ) {
+            $arg1->data['cc_type'] = $arg1->payment_details['cc_type'];
+          } elseif ( strlen($arg1->payment_details['cc_number']) > 4 ) {
+            $arg1->data['cc_type'] = _ch_reports_card_type($arg1->payment_details['cc_number']);
+          } elseif ( $arg1->data['cc_type'] ) {
+            $arg1->data['cc_type'] = $arg1->data['cc_type'];
+          }
+          $data = $arg1->data;
+          db_query("UPDATE {uc_orders} SET data = '%s' WHERE order_id = %d", serialize($arg1->data), $arg1->order_id);
+        }
+      }
+      $tracking = new SankyOrigins();
+      $tracking->track();
+      $tracking = $tracking->getOriginInformation();
+      if ( $tracking['origin'] ) {
+        db_query("DELETE FROM {ch_order_origin} WHERE order_id=%d", $arg1->order_id);
+        $codes = explode('|', $tracking['origin']);
+        $last = count($codes) - 1;
+        foreach ( $codes as $key => $code ) {
+          db_query("INSERT INTO {ch_order_origin} (order_id, origin, secondary) VALUES (%d, '%s', %d)", $arg1->order_id, $code, ($last==$key?0:1));
+        }
+      }
+      break;
+  }
+}
+
+function _ch_reports_get_query_params() {
+  $get = $_GET;
+  unset($get['q']);
+  return $get;
+}
+
+if(!function_exists('str_putcsv')) {
+  function str_putcsv($input, $delimiter = ',', $enclosure = '"') {
+    $fp = fopen('php://temp', 'r+');
+    fputcsv($fp, $input, $delimiter, $enclosure);
+    rewind($fp);
+    $data = fgets($fp);
+    fclose($fp);
+    return rtrim( $data, "\n" );
+  }
+}
+
+// Returns the PayPal approved credit card type for a card number.
+function _ch_reports_card_type($cc_number) {
+  switch (substr(strval($cc_number), 0, 1)) {
+    case '3':
+      return 'Amex';
+    case '4':
+      return 'Visa';
+    case '5':
+      return 'MasterCard';
+    case '6':
+      return 'Discover';
+  }
+
+  return FALSE;
+}

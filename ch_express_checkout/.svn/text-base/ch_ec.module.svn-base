@@ -1,0 +1,294 @@
+<?php
+
+function ch_ec_menu_alter( &$items ) {
+  $items['cart/checkout/review'] = array(
+    'title' => 'Review order',
+    'description' => 'Review an order before final submission.',
+    'page callback' => 'ch_ec_uc_cart_checkout_review',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+}
+
+/**
+ * Implementation of hook_form_alter()
+ * Use this instead of hook_form_FORM_ID_alter(),
+ * as this needs to run after uc_paypal_form_alter()
+ */
+function ch_ec_form_alter( &$form, &$form_state, $form_id ) {
+  if ($form_id == 'uc_cart_checkout_form' && variable_get('uc_payment_method_paypal_ec_checkout', FALSE) && FALSE !== ($key = array_search('uc_paypal_ec_checkout', $form['#submit'])) ) {
+    $form['#submit'][$key] = 'ch_ec_ec_checkout';
+  }
+  if ($form_id == 'uc_cart_checkout_review_form' && !empty($_SESSION['RECURRING_TOKEN'])) {
+    $form['#submit'][] = 'ch_ec_ec_submit_form_submit';
+  }
+}
+
+/**
+ * This duplicates the functionality of uc_paypal_ec_checkout()
+ * but adds recurring payments capabilities
+ */
+function ch_ec_ec_checkout( $form, &$form_state ) {
+  if ($form_state['values']['panes']['payment']['payment_method'] != 'paypal_ec') {
+    return;
+  }
+  
+  $order_id = intval($_SESSION['cart_order']);
+  
+  $order = uc_order_load($order_id);
+  if ($order === FALSE || uc_order_status_data($order->order_status, 'state') != 'in_checkout') {
+    $_SESSION['cart_order'] = NULL;
+    unset($_SESSION['cart_order']);
+    drupal_goto('cart');
+  }
+  
+  list($desc, $subtotal) = _uc_paypal_product_details($order->products);
+  
+  $country = uc_get_country_data(array('country_id' => $order->billing_country));
+  if ($country === FALSE) {
+    $country = array(0 => array('country_iso_code_2' => 'US'));
+  }
+  
+  $context = array(
+    'revision' => 'formatted-original',
+    'type' => 'order_total',
+    'subject' => array(
+      'order' => $order,
+    ),
+  );
+  $options = array(
+    'sign' => FALSE,
+    'thou' => FALSE,
+    'dec' => '.',
+  );
+  
+  $nvp_request = array(
+    'METHOD' => 'SetExpressCheckout',
+    'RETURNURL' => url('cart/echeckout/selected', array('absolute' => TRUE)),
+    'CANCELURL' => url('uc_paypal/wps/cancel', array('absolute' => TRUE)),
+    'AMT' => uc_price($order->order_total, $context, $options),
+    'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
+    'PAYMENTACTION' => variable_get('uc_paypal_wpp_payment_action', 'Sale'),
+    'DESC' => substr($desc, 0, 127),
+    'INVNUM' => $order->order_id .'-'. time(),
+    'REQCONFIRMSHIPPING' => variable_get('uc_paypal_ec_rqconfirmed_addr', 0),
+    'ADDROVERRIDE' => 1,
+    'BUTTONSOURCE' => 'Ubercart_ShoppingCart_EC_US',
+    'NOTIFYURL' => url('uc_paypal/ipn/'. $order->order_id, array('absolute' => TRUE)),
+    'SHIPTONAME' => substr($order->delivery_first_name .' '. $order->delivery_last_name, 0, 32),
+    'SHIPTOSTREET' => substr($order->delivery_street1, 0, 100),
+    'SHIPTOSTREET2' => substr($order->delivery_street2, 0, 100),
+    'SHIPTOCITY' => substr($order->delivery_city, 0, 40),
+    'SHIPTOSTATE' => uc_get_zone_code($order->delivery_zone),
+    'SHIPTOCOUNTRYCODE' => $country[0]['country_iso_code_2'],
+    'SHIPTOZIP' => substr($order->delivery_postal_code, 0, 20),
+    'PHONENUM' => substr($order->delivery_phone, 0, 20),
+  );
+  
+  if (!uc_cart_is_shippable()) {
+    $nvp_request['NOSHIPPING'] = 1;
+    unset($nvp_request['ADDROVERRIDE']);
+  }
+  
+  $recurring = FALSE;
+  foreach ( $order->products as $product ) {
+    if ( ch_donate_is_recurring($product) ) {
+      $recurring = TRUE;
+      break;
+    }
+  }
+  if ( $recurring ) {
+    $nvp_request['L_BILLINGTYPE0'] = 'RecurringPayments';
+    $nvp_request['L_BILLINGAGREEMENTDESCRIPTION0'] = 'Covenant House Recurring Donation';
+  }
+  
+  $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+  
+  if ($nvp_response['ACK'] != 'Success') {
+    drupal_set_message(t('Error message from PayPal:<br />@message', array('@message' => $nvp_response['L_LONGMESSAGE0'])), 'error');
+    drupal_goto('cart/checkout');
+  }
+  
+  $_SESSION['TOKEN'] = $nvp_response['TOKEN'];
+  if ( $recurring ) {
+    $_SESSION['RECURRING_TOKEN'] = $nvp_response['TOKEN'];
+  }
+  
+  if (strpos(variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'), 'sandbox') > 0) {
+    $sandbox = 'sandbox.';
+  }
+  
+  header('Location: https://www.'. $sandbox .'paypal.com/cgi-bin/webscr?cmd=_express-checkout&token='. $_SESSION['TOKEN']);
+  exit();
+}
+
+function ch_ec_ec_submit_form_submit( $form, &$form_state ) {
+  $order = uc_order_load($_SESSION['cart_order']);
+
+  list($desc, $subtotal) = _uc_paypal_product_details($order->products);
+
+  $shipping = 0;
+  if (is_array($order->line_items)) {
+    foreach ($order->line_items as $item) {
+      if ($item['type'] == 'shipping') {
+        $shipping += $item['amount'];
+      }
+    }
+  }
+
+  $tax = 0;
+  if (module_exists('uc_taxes')) {
+    foreach (uc_taxes_calculate($order) as $tax_item) {
+      $tax += $tax_item->amount;
+    }
+  }
+
+  $subtotal = $order->order_total - $tax - $shipping;
+
+  $country = uc_get_country_data(array('country_id' => $order->billing_country));
+  if ($country === FALSE) {
+    $country = array(0 => array('country_iso_code_2' => 'US'));
+  }
+
+  $context = array(
+    'revision' => 'formatted-original',
+    'type' => 'order_total',
+    'subject' => array(
+      'order' => $order,
+    ),
+  );
+  $options = array(
+    'sign' => FALSE,
+    'thou' => FALSE,
+    'dec' => '.',
+  );
+  
+  /*$nvp_request = array(
+    'METHOD' => 'GetExpressCheckoutDetails',
+    'TOKEN' => $_SESSION['RECURRING_TOKEN'],
+  );
+  $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+  $PAYERID = $nvp_response['PAYERID'];*/
+
+  $nvp_request = array(
+    'METHOD' => 'CreateRecurringPaymentsProfile',
+    'TOKEN' => $_SESSION['RECURRING_TOKEN'],
+    'AMT' => uc_price($order->order_total, $context, $options),
+    'CURRENCYCODE' => variable_get('uc_paypal_wpp_currency', 'USD'),
+    'PROFILESTARTDATE' => _ch_ec_profile_start_date($order->created),
+    'BILLINGPERIOD' => 'Month',
+    'BILLINGFREQUENCY' => 1,
+    'DESC' => 'Covenant House Recurring Donation',
+    'MAXFAILEDPAYMENTS' => 2,
+  );
+
+  $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+  
+  if ( $nvp_response['ACK'] == 'Success' ) {
+    db_query("SELECT * FROM {ch_express_checkout_recurring_payments} WHERE ProfileID='%s'", $nvp_response['PROFILEID']);
+    if ( $row = db_fetch_object($result) ) {
+      db_query("UPDATE {ch_express_checkout_recurring_payments} SET ProfileStatus='%s', order_id=%d, lastPaymentDate=%d WHERE ProfileID='%s'", $nvp_response['PROFILESTATUS'], $order->order_id, 0, $nvp_response['PROFILEID']);
+    } else {
+      db_query("INSERT INTO {ch_express_checkout_recurring_payments} (ProfileID, ProfileStatus, order_id, lastPaymentDate) VALUES ('%s', '%s', %d, %d)", $nvp_response['PROFILEID'], $nvp_response['PROFILESTATUS'], $order->order_id, 0);
+    }
+  }
+
+  unset($_SESSION['RECURRING_TOKEN']);
+}
+
+function _ch_ec_profile_start_date( $time ) {
+  $date = date('d', $time);
+  if ( (int)$date > 28 ) {
+    $time = strtotime(date('Y-m', $time).'-01 +1 month');
+  }
+  $start = strtotime(date('Y-m-d', $time).' +1 month');
+  return date('c',$start);
+}
+
+function _ch_ec_update_profile( $pid ) {
+  $result = db_query("SELECT * FROM {ch_express_checkout_recurring_payments} WHERE ProfileID='%s'", $pid);
+  if ( $row = db_fetch_object($result) ) {
+    $nvp_request = array(
+      'METHOD' => 'GetRecurringPaymentsProfileDetails',
+      'PROFILEID' => $row->ProfileID,
+    );
+    $nvp_response = uc_paypal_api_request($nvp_request, variable_get('uc_paypal_wpp_server', 'https://api-3t.sandbox.paypal.com/nvp'));
+    if ( $nvp_response['LASTPAYMENTDATE'] ) {
+      $lastpayment = strtotime($nvp_response['LASTPAYMENTDATE']);
+      if ( $lastpayment > $row->lastPaymentDate ) {
+        $payment['date'] = $lastpayment;
+        $payment['amt'] = $nvp_response['LASTPAYMENTAMT'];
+        _ch_ec_profile_add_payment($row, $payment);
+      }
+    }
+    if ( $nvp_response['STATUS'] ) {
+      db_query("UPDATE {ch_express_checkout_recurring_payments} SET ProfileStatus='%s' WHERE ProfileID='%s'", $nvp_response['STATUS'], $row->ProfileID);
+    }
+  }
+}
+
+function _ch_ec_profile_add_payment($profile, $payment) {
+  $order = uc_order_load($profile->order_id);
+  if ( !$order->order_id ) {
+    return FALSE;
+  }
+  $order->order_id = null; // For safety
+  $shell_order = uc_order_new($record->uid);
+  // Set the original order id to the new one
+  $order->order_id = $shell_order->order_id;
+  
+  
+  // Set the order date to the payment date
+  $order->created = $payment['date'];
+  db_query("UPDATE {uc_orders} SET created=%d WHERE order_id=%d", $order->created, $order->order_id); // this won't automatically save
+  
+  $order->order_status = 'completed'; // in case the original never got an IPN response
+  
+  // add a recurring donation to the order
+  $product = node_load(47); // the recurring donation node
+  $product->price = $payment['amt'];
+  $product->qty = 1;
+  $order->products = array($product);
+  
+  // Save the order
+  uc_order_save($order);
+  
+  // add an admin comment
+  $comment = "Automatically created order for express checkout recurring order with ProfileID ".$profile->ProfileID.".";
+  uc_order_comment_save($order->order_id, $order->uid, $comment, 'admin');
+  
+  // log the transaction
+  watchdog('ec_cron', 'Added a payment for profile %profile_id.', array('%profile_id' => $profile->ProfileID));
+  
+  
+  db_query("UPDATE {ch_express_checkout_recurring_payments} SET lastPaymentDate=%d WHERE ProfileID='%s'", $payment['date'], $profile->ProfileID);
+  
+  return $order->order_id;
+}
+
+function ch_ec_cron() {
+  $threshold = time()-2332800; // 27 days ago, to make sure nothing is missed
+  $result = db_query("SELECT ProfileID FROM {ch_express_checkout_recurring_payments} WHERE ProfileStatus LIKE 'Active%' AND lastPaymentDate < %d", $threshold);
+  while ( $row = db_fetch_object($result) ) {
+    _ch_ec_update_profile($row->ProfileID);
+  }
+}
+
+
+/**
+ * Hijack the checkout review page
+ * If it's an Express Checkout payment, process and go to the next page
+ * Otherwise, delegate back to original function
+ */
+function ch_ec_uc_cart_checkout_review() {
+  module_load_include('inc', 'uc_cart', 'uc_cart.pages');
+  if ( $_SESSION['TOKEN'] ) {
+    $form_state['values'] = array('op'=>'Submit order');
+    drupal_execute('uc_cart_checkout_review_form', $form_state);
+    // drupal_execute won't redirect, so do it here
+    if ( $form_state['redirect'] ) {
+      drupal_goto($form_state['redirect']);
+    }
+  }
+  return uc_cart_checkout_review();
+}

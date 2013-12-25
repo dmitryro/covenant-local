@@ -1,0 +1,246 @@
+<?php
+// $Id$
+
+/**		
+ * @package     Covenant House    
+ * @uses        Adds subscribers to the database VIA the header.   
+ * @author		Richard Castera
+ * @date		12/2/2009
+ * @comment		This module adds subscribers to the database
+ * @ticket		https://snac.sankyserver.com/projects/78/tickets/8		
+ **/
+
+
+/**
+ * @uses        Implementation of hook_init()
+ * @comments    Adds css and js files. 
+ **/
+function header_email_subscribe_init() {
+     drupal_add_js(drupal_get_path('module', 'header_email_subscribe') . '/header_email_subscribe.js');
+     drupal_add_css(drupal_get_path('module', 'header_email_subscribe') . '/header_email_subscribe.css');
+}
+
+
+/**
+ * @uses        Implementation of hook_menu()
+ * @comments    Handles the ajax call. 
+ **/
+function header_email_subscribe_menu() {
+    $items['header-subscribe'] = array (
+        'page callback'=>'header_email_subscribe_subscribe',
+        'access arguments'=>array('access content'),
+        'type'=>MENU_CALLBACK              
+    );
+    
+    return $items;
+}
+
+
+/**
+ * @comments    Processes the subscriber. 
+ **/
+function header_email_subscribe_subscribe() {	
+	// Verify if the email was posted.
+	if($_POST['email']) {
+	    $firstName = trim(stripslashes(strip_tags($_POST['first_name'])));
+        $lastName = trim(stripslashes(strip_tags($_POST['last_name'])));
+		$email = trim(stripslashes(strip_tags($_POST['email'])));
+		$origin = NULL;
+		
+        // Get origin tracking information.
+        if(class_exists('SankyOrigins')) {
+            $tracking = new SankyOrigins();
+      		$tracking->track();
+      		$tracking = $tracking->getOriginInformation();
+      		if($tracking['origin']) {
+    			$origin = $tracking['origin'];
+    		}    
+        }
+		
+		// Get the newsletters subscribed to.
+//		$newsletters = array (
+//			'beacon'=>($_POST['ch_news_beacon'] == 'true')? 48:'',
+//			'reflections'=>($_POST['ch_news_reflections'] == 'true')? 49:'',
+//			'voice'=>($_POST['ch_news_voice'] == 'true')? 50:''
+//		);
+		
+		// Add subscribtions to newsletters
+		$result = FALSE;
+		//foreach($newsletters as $news) {
+			//if($news != '') {
+				$result = header_email_add_subscriber($firstName, $lastName, $email, $origin);	
+			//}
+		//}
+		
+		// Check to see if the subscriber was added successfully.
+		if($result) {
+			drupal_json(array(
+                'added'=>TRUE
+            ));
+		}
+		else {
+            drupal_json(array(
+                'added'=>FALSE
+            ));
+		}
+        
+        exit;
+	}
+    else {
+        drupal_goto('');
+    }
+}
+
+
+/**
+ * @comments    Processes a subscribtion. 
+ **/
+function header_email_add_subscriber($firstName, $lastName, $email, $origin) {
+    header_email_add_subscriber_kintera($firstName, $lastName, $email);
+    
+    if(header_email_subscriber_exists($email)) {
+    	return TRUE;
+    }
+    else {
+        // Setup the values to be added to the database.
+//    	$values = array (
+//    		'sid'=>NULL,
+//    		'email'=>$email,
+//    		'first_name'=>$firstName,
+//    		'last_name'=>$lastName,
+//    		'address_1'=>'',
+//    		'address_2'=>'',
+//    		'city'=>'',
+//    		'state'=>'',
+//    		'postal_code'=>'',
+//    		'country'=>'',
+//    		'telephone'=>'',
+//    		'newsletter'=>48,
+//    		'created'=>time(),
+//    		'origin'=>$origin,
+//            'form_type'=>'header',
+//    	);
+        
+    	//return drupal_write_record('ch_subscriptions', $values);
+        return db_query("INSERT INTO {ch_subscriptions} (email, first_name, last_name, address_1, address_2, city, state, postal_code, country, telephone, newsletter, created, origin, form_type)
+                         VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, '%s', '%s')", 
+                         $email, $firstName, $lastName, '', '', '', '', '', '', '', 48, time(), $origin, 'header');
+    }
+}
+
+
+/**
+ * @comments    Check if a subscriber record exists. 
+ **/
+function header_email_subscriber_exists($email) {
+    return db_result(db_query("SELECT COUNT(email) FROM {ch_subscriptions} WHERE email = '%s' AND newsletter = %d", $email, 48));
+}
+
+
+/**
+ * @comments    Adds a subscriber to Kintera. 
+ **/
+function header_email_add_subscriber_kintera($firstName, $lastName, $email) {
+    
+    if(file_exists($_SERVER['DOCUMENT_ROOT'] . '/sites/all/modules/covenant_house/Kintera/Class.SankyKintera.php')) {
+        require_once($_SERVER['DOCUMENT_ROOT'] . '/sites/all/modules/covenant_house/Kintera/Class.SankyKintera.php');    
+    }
+    
+    if(class_exists('SankyKintera')) {
+        
+        // Set the root directory of the Kintera folder
+		$KinteraRoot = $_SERVER['DOCUMENT_ROOT'] . '/sites/all/modules/covenant_house/Kintera';
+
+		// Load the Kintera Class
+		require_once($KinteraRoot . '/Class.SankyKintera.php');
+
+		// Include libraries for SOAP calls.
+		$nusoapPath = $KinteraRoot . '/lib/nusoap.php';
+		$wsdlPath = $KinteraRoot . '/KinteraConnect.wsdl';
+        
+        // Contact Profile
+		$contactProfile = array(
+    		'FirstName'=>$firstName,
+    		'LastName'=>$lastName,
+    		'Email'=>$email,
+    		'AlternateID'=>'ch_' . $email,
+    		'PrimaryAddressLine1'=>'',
+    		'PrimaryAddressLine2'=>'',
+    		'PrimaryAddressCity'=>'',
+    		//'PrimaryAddressState'=>'NY', // Do not know how to pass this correctly to Kintera. Getting a SOAP Error with these variations ('NY', 'New York')
+    		'PrimaryAddressZip'=>'',
+    		//'PrimaryAddressCountry'=>'US', // Do not know how to pass this correctly to Kintera. Getting a SOAP Error with these variations ('US', 'United States')
+    		'Phone'=>'',
+    		'EmailFormat'=>'HTML'
+ 		);
+        
+        // Get the subscribers info so in case an error occurs we can still get the information.
+        $contactInfo = print_r($contactProfile, TRUE);
+        
+        // Instantiate the Kintera Object.
+        $Kintera = new SankyKintera($nusoapPath, $wsdlPath);
+        
+        // Connect to Kintera    
+        if($Kintera->Connect('sankyadmin', 'sankiew38p', '291713')) {
+            
+            // Check if contact exists
+            $contactID = $Kintera->contactExists($email);
+        	if($contactID) {
+        		$contactProfile['ContactID'] = $contactID;
+        		
+                // If the contact exists, update their information.
+                if(($Kintera->updateContact($contactProfile, TRUE)) == FALSE) {
+        			$error = '[Could not update Contact - Header Subscribe]' . "\n\r" . $Kintera->getError() . "\n\r" . $contactInfo;
+                    mail('rcastera@sankyinc.com', 'Covenant House Kintera API Error', $error);
+        		}
+        	}
+        	else {
+        	    // Add new Contact.
+        		$contactID = $Kintera->addContact($contactProfile, TRUE);
+        	}
+            
+            // Lets add the Custom fields.
+            if($contactID) {  
+                /**
+                 * Constituency Custom Field
+                 **/
+                $customFields = array(
+                    'ContactID'=>$contactID,
+                    'FieldID'=>'4814053', 
+                    'Value'=>'Prospect'
+                );
+                
+                // Update the contact added with some custom fields.
+                $Kintera->updateCustomFields($customFields);
+                
+                // If there was an error adding the custom field to the contact, email it to us.
+                if($Kintera->getError() != '') {
+                    $error = '[Could not add the Constituency Custom Field - Header Subscribe]' . "\n\r" . $Kintera->getError() . "\n\r" . $contactInfo;
+                    mail('rcastera@sankyinc.com', 'Covenant House Kintera API Error', $error);
+                }
+                
+                /**
+                 * Subscription Custom Field
+                 **/
+                $customFields = array(
+                    'ContactID'=>$contactID,
+                    'FieldID'=>'4814055', 
+                    'Value'=>'Yes'
+                );
+                
+                // Update the contact added with some custom fields.
+                $Kintera->updateCustomFields($customFields);
+                
+                // If there was an error adding the custom field to the contact, email it to us.
+                if($Kintera->getError() != '') {
+                    $error = '[Could not add the Subscription Custom Field - Header Subscribe]' . "\n\r" . $Kintera->getError() . "\n\r" . $contactInfo;
+                    mail('rcastera@sankyinc.com', 'Covenant House Kintera API Error', $error);
+                }
+            }
+        }
+        else {
+			$error = '[Could not Connect to Kintera - Header Subscribe]' . "\n\r" . $Kintera->getError() . "\n\r" . $contactInfo;
+		    mail('rcastera@sankyinc.com', 'Covenant House Kintera API Error', $error);
+		}
+    }
+}

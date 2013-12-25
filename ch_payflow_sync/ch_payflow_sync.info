@@ -1,0 +1,7 @@
+; $Id$
+name = Payflow Sync
+description = "Syncronizes recurring donations in Drupal's database with Payflow"
+package = Covenant House
+core = 6.x
+version = 1.0
+dependencies[] = uc_payflowpro

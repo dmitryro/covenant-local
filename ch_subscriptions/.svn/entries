@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="354"
+   name=""
+   committed-date="2010-01-26T01:18:36.680646Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_subscriptions"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="354"
+   name="ch_subscriptions.kintera.inc"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2010-01-26T01:18:36.680646Z"
+   checksum="203d39ba2feb61fc5cb32eaa66a7314c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="297"
+   name="ch_subscriptions.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-11-06T16:30:24.014402Z"
+   checksum="e740dc761e73b6e5a6fbf1f6e239e6e3"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="145"
+   name="ch_subscriptions.install"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-09-28T13:50:01.624947Z"
+   checksum="8d29fded5d43c99d72da88d8fcee070a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="145"
+   name="ch_subscriptions.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-09-28T13:50:01.624947Z"
+   checksum="b54807e45896fa7b4ee8810e034635d0"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

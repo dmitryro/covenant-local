@@ -1,0 +1,6 @@
+; $Id$
+name = Slideshow
+description = "To be used with a Slideshow Content Type"
+package = Covenant House
+core = 6.x
+version = 1.0

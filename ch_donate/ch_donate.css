@@ -1,0 +1,196 @@
+#content #uc-cart-checkout-form .checkout-pane {
+  /**
+  @rc - molly change on 7-15-2010
+  background-color: #D6E8C2;**/
+  
+  background-color: #e9e9e9;
+  padding: 20px;
+  margin: 10px 0;
+  overflow: hidden;
+  color: #4C4C4C;
+  clear: left;
+}
+
+#content #uc-cart-checkout-form .checkout-pane-even {
+  /**
+  @rc - molly change on 7-15-2010
+  background-color: #FDEAC1; **/
+  background-color: #e9e9e9;
+}
+
+#content #uc-cart-checkout-form .checkout-pane  h3 {
+  color:#666666;
+  font-size:14px;
+  margin:0 0 5px;
+  padding:0;
+  text-transform:uppercase;
+  font-weight: bold;
+  letter-spacing: normal;
+}
+
+
+
+#content #uc-cart-checkout-form .checkout-pane  h3 .description {
+  font-size:11px;
+  font-weight:normal;
+  padding:0 0 0 5px;
+}
+
+#content #uc-cart-checkout-form .checkout-pane label {
+  padding: 0 3px;
+  font-weight: normal;
+  /*white-space:nowrap;*/
+}
+
+#content #uc-cart-checkout-form .checkout-pane .field-label {
+  font-weight: normal;
+  color: #4C4C4C;
+  text-align: left;
+  padding-right: 1.5em;
+}
+
+#content #uc-cart-checkout-form .form-required {
+  font-size: 150%;
+  line-height: 12px;
+  vertical-align: middle;
+}
+
+#content #uc-cart-checkout-form .note {
+  font-size: 10px;
+}
+
+#content #uc-cart-checkout-form #donate-pane .form-item,
+
+#content #uc-cart-checkout-form #donate_required-pane .form-item,
+
+#content #uc-cart-checkout-form #donate_optional-pane .form-item {
+  margin: 0;
+}
+
+#content #uc-cart-checkout-form #donate-pane .form-radios .form-item,
+
+#content #uc-cart-checkout-form #donate_required-pane .form-radios .form-item,
+
+#content #uc-cart-checkout-form #donate_optional-pane .form-radios .form-item {
+  float: left;
+  margin: 0 0 1em;
+}
+
+#content #uc-cart-checkout-form #donate-pane .form-radios #edit-panes-donate-amount-other-wrapper,
+
+#content #uc-cart-checkout-form #donate_required-pane .form-radios #edit-panes-donate-amount-other-wrapper,
+
+#content #uc-cart-checkout-form #donate_optional-pane .form-radios #edit-panes-donate-amount-other-wrapper {
+  clear: left;
+  width: 120px;
+  white-space: nowrap;
+}
+
+#content #uc-cart-checkout-form #donate-pane #edit-panes-donate-other-amount-wrapper input,
+
+#content #uc-cart-checkout-form #donate_required-pane #edit-panes-donate-other-amount-wrapper input,
+
+#content #uc-cart-checkout-form #donate_optional-pane #edit-panes-donate-other-amount-wrapper input {
+  margin-right: 10em;
+}
+
+#content #uc-cart-checkout-form #donate-pane .form-radios,
+
+#content #uc-cart-checkout-form #donate_required-pane .form-radios,
+
+#content #uc-cart-checkout-form #donate_optional-pane .form-radios {
+  clear: left;
+  margin: 0 0 5px;
+}
+
+
+
+#content .donate-checkout-page #uc-cart-checkout-form #cart-pane {
+  display: none;
+}
+
+
+
+#content #uc-cart-checkout-form #cart-pane .cart-review {
+  border: none;
+}
+
+#content #uc-cart-checkout-form #cart-pane tr {
+  border: none;
+  background-color: transparent;
+}
+
+
+
+#content #uc-cart-checkout-form #cart-pane th {
+  border: none;
+  background-color: transparent;
+}
+
+
+
+#content #uc-cart-checkout-form #tribute-pane .field-row {
+  margin: 0 0 5px;
+}
+
+#content #uc-cart-checkout-form #tribute-pane .form-item {
+  display: inline;
+}
+
+
+
+#content #uc-cart-checkout-form #checkout-form-bottom {
+  border: none;
+}
+#content #uc-cart-checkout-form #checkout-form-bottom input{
+  float: right;
+}
+
+#content #uc-cart-checkout-form #payment_details {
+  border: none;
+}
+
+#content #uc-cart-checkout-form #subscribe-pane .form-item {
+  float: left;
+  padding-bottom: 0.5em;
+}
+
+#content #uc-cart-checkout-form #subscribe-pane input {
+  float: left;
+  clear: left;
+  width: 2em;
+  display: block;
+}
+
+#content #uc-cart-checkout-form #subscribe-pane .title {
+  display: block;
+  font-weight: bold;
+  float: left;
+  clear: none;
+}
+
+#content #uc-cart-checkout-form #subscribe-pane .description {
+  display: block;
+  font-size: 100%;
+  margin-left: 2.75em;
+  width: 95%;
+  float: left;
+}
+
+
+/**
+ * Added by Richard Castera to display dollar sign next to other amount
+ **/
+#other_amt_dollar_sign {
+    margin: 4px 0 0 88px;
+    position: absolute;
+}
+
+#donate-pane .form-radios {
+    width: 600px;
+}
+
+#donate-pane #edit-panes-donate-other-amount-wrapper {
+    float: left;
+}
+

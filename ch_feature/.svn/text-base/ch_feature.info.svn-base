@@ -1,0 +1,6 @@
+; $Id$
+name = Featured Block
+description = "Creates a block that displays the appropriate featured node for the page."
+package = Covenant House
+core = 6.x
+version = 1.0

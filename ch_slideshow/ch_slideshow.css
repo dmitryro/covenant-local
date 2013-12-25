@@ -1,0 +1,80 @@
+/**
+ * Author:		Richard Castera
+ * Date:		06/08/2010
+ * Comments:	used for the slideshow Content Type.	
+ **/
+.field-field-slideshow-image {
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+}
+
+.field-field-slideshow-image #slideshow_pager {
+    width: 100%;
+}
+
+.field-field-slideshow-image #slideshow_page {
+    margin: 0pt auto;
+    padding: 0px;
+    width: auto;
+    text-align: center;
+}
+
+.field-field-slideshow-image #slideshow {
+    margin:auto;
+    margin-bottom: 20px;
+}
+
+.field-field-slideshow-image #slideshow_page li { 
+    display: inline;
+    list-style: none;
+}
+
+.field-field-slideshow-image #slideshow_page a { 
+    margin: 0px 3px 0px 0px;
+    padding: 3px 5px;
+    width: auto;
+    height: auto;
+    border: 1px solid #777;
+    background: #ccc;
+    text-decoration: none;
+    color: #333;
+    zoom: 1;
+}
+
+.field-field-slideshow-image #slideshow_page a:hover {
+    background: #fff;  
+}
+
+.field-field-slideshow-image #slideshow_page a.activeSlide {
+    background: #f5a809;
+    color: #fff;
+}
+
+.field-field-slideshow-image #slideshow_page a:focus {
+    outline: none;
+}
+
+.field-field-slideshow-image #slidehow_nav {
+    margin: 0pt auto;
+    padding: 10px 0px;
+    text-align: center;
+    width: 300px;
+    clear: both;
+}
+
+.field-field-slideshow-image .slideshow_data .slideshow_title {
+    margin: 5px 0px;
+    color: #45BAF6;
+    font-size: 18px;
+    font-weight: normal;
+    letter-spacing: -0.02em;
+}
+
+.field-field-slideshow-image .slideshow_data .slideshow_description {
+    margin: 10px 0px;    
+}
+
+.field-field-slideshow-image .slideshow_data .slideshow_copyright {
+    font-style: italic;
+}

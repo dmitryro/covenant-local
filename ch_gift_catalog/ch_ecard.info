@@ -1,0 +1,7 @@
+; $Id$
+name = E-Cards
+description = "Creates a catalog of customizable eCards."
+package = Covenant House
+core = 6.x
+version = 1.1
+dependencies[] = ch_gift_catalog

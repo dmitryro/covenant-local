@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="354"
+   name=""
+   committed-date="2010-01-26T01:18:36.680646Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_reports"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="ch_reports.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="aa3fd5b59dfe82456cc026764a82ee4d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="354"
+   name="ch_reports.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2010-01-26T01:18:36.680646Z"
+   checksum="ecf991fba1e7e74d77d894a3a9733a63"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="305"
+   name="ch_reports.install"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-11-18T03:18:00.918566Z"
+   checksum="a86c04a377e6b7a81d56b035f9416d7f"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

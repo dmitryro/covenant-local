@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="328"
+   name=""
+   committed-date="2009-12-02T16:01:41.046685Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/Kintera"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="272"
+   name="KinteraConnect.wsdl"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="ede4e9817863602dbc4f2908f974fe42"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   name="lib"
+   kind="dir"/>
+<entry
+   committed-rev="328"
+   name="Class.SankyKintera.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-12-02T16:01:41.046685Z"
+   checksum="9dc9a8b2797e30b8cfa2f0b6a0318ee6"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+</wc-entries>

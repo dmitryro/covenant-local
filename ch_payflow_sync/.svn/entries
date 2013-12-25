@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="339"
+   name=""
+   committed-date="2009-12-14T20:13:33.604075Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_payflow_sync"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="249"
+   name="ch_payflow_sync.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-10-23T15:37:54.177978Z"
+   checksum="a47c5c384c7060dfdd311a3e2a76c5bb"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="339"
+   name="ch_payflow_sync.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-12-14T20:13:33.604075Z"
+   checksum="bd28ed517c71fd42c98ce6e17f0a2dd2"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="249"
+   name="ch_payflow_sync.install"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-10-23T15:37:54.177978Z"
+   checksum="48f5f665bb4bcef1f0a4d7eca78cd2d8"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

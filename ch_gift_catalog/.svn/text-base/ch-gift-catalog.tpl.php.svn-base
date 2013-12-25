@@ -1,0 +1,17 @@
+<?php
+// $Id$
+/**
+ * Loosely based on node.tpl.php
+ */
+?>
+<div id="ch_gift_catalog" class="gift-catalog">
+
+<?php if ($page == 0): ?>
+  <h2><?php print $title ?></h2>
+<?php endif; ?>
+
+  <div class="content clear-block">
+    <?php print $content ?>
+  </div>
+
+</div>

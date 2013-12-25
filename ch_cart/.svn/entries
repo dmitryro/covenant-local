@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="46"
+   name=""
+   committed-date="2009-08-29T22:30:01.473527Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_cart"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="ch_cart.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="02f5daeca4749200abdc56280676e609"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch_cart.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="e62da60856c554e2651f12630be6d24c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

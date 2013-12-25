@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="304"
+   name=""
+   committed-date="2009-11-17T23:19:10.887445Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_feature/images"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="featured-gift-price-bg.png"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="b1dfffb942b5567043f29bfd37e85115"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="featured-gift-bg.gif"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="1fb3b00b2656933e9e32a556ea961ca6"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="304"
+   name="featured-ecard-bg.png"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-11-17T23:19:10.887445Z"
+   checksum="e8042c9e456e5f4e8d6ff6ae5c185fea"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="customize.png"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="a5959070c1d1086b21a36439ffc1b48a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="catalog-featured-gift-add.gif"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="416da91ea98be4654343bfea52227152"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

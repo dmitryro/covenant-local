@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="46"
+   name=""
+   committed-date="2009-08-29T22:30:01.473527Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_gift_catalog/scripts"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="ch_gift_catalog.js"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="add837e81b44060df079ee7b7aea7218"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+</wc-entries>

@@ -1,0 +1,7 @@
+; $Id$
+name = Express Checkout Modifications
+description = Modifies the PayPal Express Checkout payment method to enable recurring donations
+core = 6.x
+package = Covenant House
+dependencies[] = ch_donate
+dependencies[] = uc_paypal

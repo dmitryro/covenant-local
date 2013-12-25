@@ -1,0 +1,319 @@
+<?php
+
+/**
+ * @file Syncronizes Drupal's database with the recurring profiles in Payflow
+ */
+
+function _ch_payflow_sync_known_profile_ids( $rebuild = FALSE ) {
+  static $ids = array();
+  if ( $rebuild || !$ids ) {
+    $ids = array();
+    $result = db_query("SELECT pfp_profile_id FROM {uc_payflowpro_recurring_profiles}");
+    while ( $row = db_fetch_object($result) ) {
+      $ids[] = $row->pfp_profile_id;
+    }
+    sort($ids);
+  }
+  return $ids;
+}
+
+function _ch_payflow_sync_profile_last_name( $profile_id, $rebuild = FALSE ) {
+  static $profiles = array();
+  if ( $rebuild ) {
+    $profiles = array();
+  }
+  if ( $profiles[$profile_id] ) {
+    return $profiles[$profile_id];
+  }
+  $sql = "SELECT o.order_id, o.billing_last_name FROM {uc_payflowpro_recurring_profiles} rp LEFT JOIN {uc_orders} o ON rp.order_id=o.order_id WHERE rp.pfp_profile_id='%s'";
+  $result = db_query($sql, $profile_id);
+  if ( $row = db_fetch_object($result) ) {
+    $profiles[$profile_id] = $row->billing_last_name;
+    if ( $profiles[$profile_id] ) { // don't return an empty name
+      return $profiles[$profile_id];
+    }
+  }
+  return FALSE;
+}
+
+function _ch_payflow_sync_add_profile( $profile_id, $replace = FALSE ) {
+  $result = db_query("SELECT pfp_profile_id, order_id FROM {uc_payflowpro_recurring_profiles} WHERE pfp_profile_id='%s'", $profile_id);
+  $row = db_fetch_object($result);
+  if ( !$replace && $row ) {
+    return FALSE;
+  }
+  $profile = new PayflowProRecurring($profile_id, _uc_payflowpro_get_auth());
+  $profile->refresh();
+  if ( $profile->getAmt() > 0 ) {
+    if ( !$profile->getEmail() ) {
+      $profile->setEmail(_ch_payflow_sync_dummy_email($profile_id));
+    }
+    $uid = db_result(db_query("SELECT uid FROM {users} WHERE mail='%s'", $profile->getEmail()));
+    if ( !$uid || $uid === 0 ) {
+      $name = uc_store_email_to_username($profile->getEmail());
+      // Setup the account fields array and save it as a new user.
+      $fields = array(
+        'name' => $name,
+        'mail' => $profile->getEmail(),
+        'init' => $profile->getEmail(),
+        'pass' => user_password(8),
+        'roles' => array(),
+        'status' => 1,
+      );
+      $account = user_save('', $fields);
+    } else {
+      $account = user_load($uid);
+    }
+    
+    // create a new order to hold info
+    $order = uc_order_new($account->uid, 'completed');
+    $order->order_total = $profile->getAmt();
+    _ch_payflow_sync_order_get_details($order, $profile);
+    $order->payment_method = 'credit';
+    $date = $profile->getStartDate();
+    $order->created = strtotime(substr($date,0,2) . '/' . substr($date,2,2) . '/' . substr($date,4,4));
+    db_query("UPDATE {uc_orders} SET created=%d WHERE order_id=%d", $order->created, $order->order_id); // this won't automatically save
+    
+    // add a recurring donation to the order
+    // nevermind, we don't actually want this for the base order
+    //$product = node_load(47); // the recurring donation node
+    //$product->price = $profile->getAmt();
+    //$product->qty = 1;
+    //$order->products = array($product);
+    
+    uc_order_save($order);
+    
+    // add an admin comment
+    $comment = "Automatically created place-holder order for recurring profile ID ".$record->pfp_profile_id.".";
+    uc_order_comment_save($order->order_id, $order->uid, $comment, 'admin');
+    
+    if ( $replace ) { // remove the old profile from the database
+      db_query("DELETE FROM {uc_payflowpro_recurring_profiles} WHERE pfp_profile_id='%s'", $profile_id);
+    }
+    
+    // add profile to the database
+    db_query("INSERT INTO {uc_payflowpro_recurring_profiles}
+             (order_id, nid, vid, pfp_uid, pfp_profile_id,
+             pfp_rpref, pfp_origid,
+             pfp_status, uc_model)
+             VALUES(%d, %d, %d, %d, '%s',
+             '%s', '%s', '%s', '%s');",
+             $order->order_id, $product->nid, $product->vid,
+             $account->uid, $profile_id, 0,
+             0, 'U', $product->model);
+    return TRUE;
+  }
+  return FALSE;
+  
+}
+
+/**
+ * For whatever reason, the initial order isn't in the database
+ */
+function _ch_payflow_sync_restore_order( $order_id, $profile = NULL ) {
+  if ( !$profile ) {
+    $profile_id = db_result(db_query("SELECT pfp_profile_id FROM {uc_payflowpro_recurring_profiles} WHERE order_id=%d", $order_id));
+  } else {
+    $profile_id = $profile->getProfileID();
+  }
+  if ( !$profile_id ) {
+    return FALSE; // can't get info about the order from paypal
+  }
+  uc_order_delete($order_id);
+  _ch_payflow_sync_add_profile($profile_id, TRUE);
+}
+
+function _ch_payflow_sync_add_payment( $payment, $record, $profile = NULL ) {
+  $order = uc_order_load($record->order_id);
+  if ( !$order->order_id ) {
+    if ( $order_id = _ch_payflow_sync_restore_order($record->order_id, $profile) ) {
+      $order = uc_order_load($order_id);
+    }
+    if ( !$order->order_id ) {
+      return FALSE;
+    }
+  }
+  $order->order_id = null; // For saftey
+  $shell_order = uc_order_new($record->uid);
+  // Set the original order id to the new one
+  $order->order_id = $shell_order->order_id;
+  
+  // Set the order date to the payment date
+  $order->created = strtotime($payment['TransTime']);
+  db_query("UPDATE {uc_orders} SET created=%d WHERE order_id=%d", $order->created, $order->order_id); // this won't automatically save
+  
+  $order->data = array(
+    'pfp_profile_id' => $record->pfp_profile_id,
+    'pnref' => $payment['PNRef'],
+  );
+  
+  // add a recurring donation to the order
+  $product = node_load(47); // the recurring donation node
+  $product->price = $payment['Amount'];
+  $product->qty = 1;
+  $order->products = array($product);
+  
+  // Save the order
+  uc_order_save($order);
+  
+  // add an admin comment
+  $comment = "Automatically created order for recurring profile ID ".$record->pfp_profile_id.".";
+  uc_order_comment_save($order->order_id, $order->uid, $comment, 'admin');
+  $comment = "Credit card payment processed successfully with pnref ".$payment['PNRef'].".";
+  uc_order_comment_save($order->order_id, $order->uid, $comment, 'admin');
+  
+  // log the transaction
+  watchdog('payflow_cron', 'Added a payment for profile %profile_id.', array('%profile_id' => $record->pfp_profile_id));
+}
+function _ch_payflow_sync_sync_profile( $profile_id ) {
+  $result = db_query("SELECT * FROM {uc_payflowpro_recurring_profiles} WHERE pfp_profile_id='%s'", $profile_id);
+  $record = db_fetch_object($result);
+  if ( !$record ) {
+    return _ch_payflow_sync_add_profile($profile_id);
+  }
+  $order = uc_order_load($record->order_id);
+  
+  $profile = new PayflowProRecurring($profile_id, _uc_payflowpro_get_auth());
+  $profile->refresh();
+  
+  _ch_payflow_sync_order_get_details($order, $profile);
+  
+  $last_payment = NULL;
+  $payment_added = FALSE;
+  $history = $profile->getPaymentHistory();
+  $start = $profile->getStartDate();
+  $start = strtotime(substr($start,0,2) . '/' . substr($start,2,2) . '/' . substr($start,4,4));
+  foreach ( $history as $payment ) {
+    // make sure each successful payment is in the database
+    if ( $payment['Result'] == 0 && $payment['Amount'] > 0 && $payment['PNRef'] ) {
+      $result = db_query("SELECT order_id FROM {uc_orders} WHERE data LIKE '%%%s%%' AND data LIKE '%%%s%%'", $profile_id, $payment['PNRef']);
+      if ( $row = db_fetch_object($result) ) {
+        $payment_order = uc_order_load($row->order_id);
+        _ch_payflow_sync_order_get_details($payment_order, $profile);
+      } else {
+        _ch_payflow_sync_add_payment($payment, $record, $profile);
+        $payment_added = TRUE;
+      }
+    }
+    $last_payment = $payment;
+  }
+  
+  if ( $payment_added ) {
+    db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status=%d, profile_status = '%s', next_payment_date = %d, last_status_check = %d WHERE pfp_profile_id='%s'", 0, $profile->getStatus(), $profile->getNextPaymentDate('unix'), time(), $profile_id);
+    watchdog('PayFlow', t('Payment added for profile !profile_id'), array('!profile_id'=>l($profile_id, 'admin/store/settings/uc_recurring/administer/'.$profile_id.'/view')));
+  } elseif ( $last_payment ) { // Check again in 12 hours for a new payment
+    db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status=%d, profile_status = '%s', next_payment_date = %d, last_status_check = %d WHERE pfp_profile_id='%s'", 0, $profile->getStatus(), time()-43200, time(), $profile_id);
+    //$account = user_load(1);
+    //drupal_mail('ch_payflow_sync', 'payment_error', $account->mail, user_preferred_language($account), array('profile_id' => $profile_id));
+    watchdog('PayFlow', t('No new payments for profile !profile_id'), array('!profile_id'=>l($profile_id, 'admin/store/settings/uc_recurring/administer/'.$profile_id.'/view')), WATCHDOG_WARNING);
+  } elseif ( !$profile->getNextPaymentDate('unix') ) {
+    db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status=%d, next_payment_date = %d, last_status_check = %d WHERE pfp_profile_id='%s'", 0, time()-82800, time(), $profile_id);
+    //$account = user_load(1);
+    //drupal_mail('ch_payflow_sync', 'sync_error', $account->mail, user_preferred_language($account), array('profile_id' => $profile_id));
+    watchdog('PayFlow', t('Unexpected PayFlow response for profile !profile_id'), array('!profile_id'=>l($profile_id, 'admin/store/settings/uc_recurring/administer/'.$profile_id.'/view')), WATCHDOG_ERROR);
+  } else {
+    // fail silently and try again next month
+    db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status=%d, profile_status = '%s', next_payment_date = %d, last_status_check = %d WHERE pfp_profile_id='%s'", 0, $profile->getStatus(), $profile->getNextPaymentDate('unix'), time(), $profile_id);
+    watchdog('PayFlow', t('Profile !profile_id was refreshed, but nothing happened'), array('!profile_id'=>l($profile_id, 'admin/store/settings/uc_recurring/administer/'.$profile_id.'/view')), WATCHDOG_WARNING);
+  }
+  
+  watchdog('payflow_cron', 'Synced profile %profile_id with Payflow.', array('%profile_id' => $profile->getProfileID()));
+  return TRUE;
+}
+
+function ch_payflow_sync_mail( $key, &$message, $params ) {
+  $message['subject'] = t('Payflow Syncronization Notice');
+  switch ( $key ) {
+    case 'payment_error':
+      $message['body'][] = 'Error syncing profile '.$params['profile_id'].'\n\nNo new payments were reported. Sync will be attempted again in 12 hours.';
+      break;
+    case 'sync_error':
+      $message['body'][] = 'Error syncing profile '.$params['profile_id'].'\n\nPayPal provided an unexpected response. Sync will be attempted again in 1 hour.';
+      break;
+  }
+}
+
+function _ch_payflow_sync_order_get_details( &$order, $profile ) {
+  $name = $profile->getName();
+  $lastname = substr(strrchr($name, ' '), 1);
+  $firstname = substr($name, 0, -(strlen($lastname)+1));
+  $order->billing_first_name = $order->billing_first_name?$order->billing_first_name:$firstname;
+  $order->billing_last_name = $order->billing_last_name?$order->billing_last_name:$lastname;
+  $order->delivery_first_name = $order->delivery_first_name?$order->delivery_first_name:$firstname;
+  $order->delivery_last_name = $order->delivery_last_name?$order->delivery_last_name:$lastname;
+  $billing = $profile->getBillTo();
+  $order->billing_street1 = $order->billing_street1?$order->billing_street1:$billing['Street'];
+  $order->billing_city = $order->billing_city?$order->billing_city:$billing['City'];
+  $order->billing_zone = $order->billing_zone?$order->billing_zone:(db_result(db_query("SELECT zone_id FROM {uc_zones} WHERE zone_code='%s'", $billing['State'])));
+  $order->billing_postal_code = $order->billing_postal_code?$order->billing_postal_code:$billing['Zip'];
+  $order->billing_country = $order->billing_country?$order->billing_country:840; // default to U.S. Don't know how payflow handles other countries.
+  $shipping = $profile->getShipTo();
+  $order->delivery_street1 = $order->delivery_street1?$order->delivery_street1:($shipping['Street']?$shipping['Street']:$order->billing_street1);
+  $order->delivery_city = $order->delivery_city?$order->delivery_city:($shipping['City']?$shipping['City']:$order->billing_city);
+  $order->delivery_zone = $order->delivery_zone?$order->delivery_zone:($shipping['State']?db_result(db_query("SELECT zone_id FROM {uc_zones} WHERE zone_code='%s'", $shipping['State'])):$order->billing_zone);
+  $order->delivery_postal_code = $order->delivery_postal_code?$order->delivery_postal_code:($shipping['Zip']?$shipping['Zip']:$order->billing_postal_code);
+  $order->delivery_country = $order->delivery_country?$order->delivery_country:($order->billing_country?$order->billing_country:840); // default to U.S. Don't know how payflow handles other countries.
+  uc_order_save($order);
+}
+
+function _ch_payflow_sync_dummy_email( $profile_id ) {
+  return sprintf("payflow%s@example.com", $profile_id);
+}
+
+function ch_payflow_sync_cron() {
+  // Delete any payments created by the function
+  // _uc_payflowpro_recurring_process_recurring()
+  $result = db_query("SELECT DISTINCT o.order_id FROM {uc_orders} o LEFT JOIN {uc_payment_receipts} r ON o.order_id=r.order_id WHERE o.data='%s' AND r.comment LIKE '%s%%'", serialize(NULL), 'Logging payment from Payflow Pro for profile ');
+  while ( $row = db_fetch_object($result) ) {
+    uc_order_delete($row->order_id);
+  }
+  
+  $result = db_query("SELECT o.order_id FROM {uc_payflowpro_recurring_profiles} rp LEFT JOIN {uc_orders} o ON o.order_id=rp.order_id WHERE o.data='%s' AND o.order_total > 0", serialize(NULL));
+  while ( $row = db_fetch_object($result) ) {
+    $order = uc_order_load($row->order_id);
+    $order->products = array();
+    uc_order_save($order);
+  }
+  
+  
+  $countdown = 30; // number of records to process per cron run
+  
+  // syncronize any unsynced profiles (should just be new profiles after the initial run)
+  $result = db_query_range("SELECT pfp_profile_id, pfp_status FROM {uc_payflowpro_recurring_profiles} WHERE pfp_status='%s'", 'U', 0, 50);
+  while ( ($row = db_fetch_object($result)) && $countdown > 0 ) {
+    _ch_payflow_sync_sync_profile($row->pfp_profile_id);
+    $countdown--;
+  }
+  
+  // syncronize any profiles that should have updated
+  $result = db_query("SELECT pfp_profile_id, next_payment_date FROM {uc_payflowpro_recurring_profiles}
+                 WHERE profile_status = 'ACTIVE' AND
+                 next_payment_date != 0 AND next_payment_date IS NOT NULL AND
+                 next_payment_date + 86400 < %d", time());
+  while( ($row = db_fetch_object($result)) && $countdown > 0 ) {
+    _ch_payflow_sync_sync_profile($row->pfp_profile_id);
+    $countdown--;
+  }
+  
+  // look for profiles in payflow but not in drupal
+  $known_ids = _ch_payflow_sync_known_profile_ids();
+  $start = variable_get('ch_payflow_sync_last_profile', 1);
+  $checked = '';
+  $max = (int)substr(end($known_ids),2) + 5;
+  for ( $i = $start ; $i < $max && $countdown > 0 ; $i++ ) {
+    $profile_id = sprintf("RP%010d", $i);
+    if ( !in_array($profile_id, $known_ids) ) {
+      if ( _ch_payflow_sync_sync_profile($profile_id) ) {
+        $countdown--;
+      }
+      $checked = $profile_id;
+    }
+  }
+  if ( $checked ) {
+    if ( (int)substr($checked,2) > (int)substr(end($known_ids),2) ) {
+      variable_set('ch_payflow_sync_last_profile', (int)substr(end($known_ids),2));
+    } else {
+      variable_set('ch_payflow_sync_last_profile', (int)substr($checked,2));
+    }
+  }
+}

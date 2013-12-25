@@ -1,0 +1,10 @@
+#content .copy .ecard-view * {
+  margin: 0;
+  padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+#content .copy .ecard-preview {
+  margin: 2em 0 20px;
+}

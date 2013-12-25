@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="341"
+   name=""
+   committed-date="2009-12-15T01:19:21.708136Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_gift_catalog"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="79"
+   name="ch_gift_catalog.module"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-09-02T14:41:21.837529Z"
+   checksum="d31f0b5fa2038ee5d79dac68efc76e7e"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="293"
+   name="ch_ecard.info"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-11-06T14:07:44.328484Z"
+   checksum="3016bbb16fbfa27f429adb9946e0f43c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-email-card.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="88dca4813ab0faa455b49896aec2a9ab"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-item.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="21991e0ca2f2f909f8d5d14f33f64884"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   name="scripts"
+   kind="dir"/>
+<entry
+   committed-rev="46"
+   name="ch_gift_catalog.info"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="cfef7b3014f0b7ba9b519ee0c708a086"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="293"
+   name="ch_ecard.admin.inc"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-11-06T14:07:44.328484Z"
+   checksum="9834a823ad20bd5b1ff36ba3b4463840"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   name="css"
+   kind="dir"/>
+<entry
+   committed-rev="95"
+   name="ch-ecard.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-09-15T17:40:53.755352Z"
+   checksum="2e9a4f8ad59506d316bb0059c1c2740c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-gift-catalog-items.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="ce85b4c276c6a1bc64b08b7230c831d8"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="52"
+   name="ch_gift_catalog.admin.inc"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-30T11:39:16.251790Z"
+   checksum="7a379044e8c14f8c5a7d1abc5c6243e4"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="341"
+   name="ch_ecard.install"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-12-15T01:19:21.708136Z"
+   checksum="eb6b0548a0a18deaf818e91f1a0241f8"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   name="images"
+   kind="dir"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-view-card.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="88dca4813ab0faa455b49896aec2a9ab"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-gift-catalog-item.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="f650e84bdc2bdcffe3946eb84ea98dbc"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-gift-catalog-pager.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="13163bd4bedd4d628c8de49b4165dc1d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-preview.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="920fc518e435dfa21368625c07ce1e50"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-items.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="0b96475d5fa3ecb3e6d8b83d01144321"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="341"
+   name="ch_ecard.module"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-12-15T01:19:21.708136Z"
+   checksum="1b849d83b44b0bf68bbdb729b913b500"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-gift-catalog.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="3acb9574333e437da9ba813e59cef629"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-ecard-attributes.tpl.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="9016f02cbc4c7bf4e28cf5b18f345e71"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+</wc-entries>

@@ -1,0 +1,6 @@
+; $Id$
+name = Covenant House
+description = "Various modifications to Drupal for covenanthouse.org"
+package = Covenant House
+core = 6.x
+version = 1.0

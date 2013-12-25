@@ -1,0 +1,107 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function ch_ecard_install() {
+  // Create tables
+  drupal_install_schema('ch_ecard');
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function ch_ecard_uninstall() {
+  // Delete tables
+  drupal_uninstall_schema('ch_ecard');
+}
+
+/**
+ * Implementation of hook_schema()
+ */
+function ch_ecard_schema() {
+  $schema['ch_ecard'] = array(
+    'description' => t('Records new ecard info'),
+    'fields' => array(
+      'opid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The order_product_id for this ecard purchase'),
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The node with the ecard template'),
+      ),
+      'sender_email' => array(
+        'type' => 'varchar',
+        'length' => 96,
+        'not null' => TRUE,
+        'description' => t('Email address of the sender'),
+      ),
+      'sender_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => t('Name of the sender'),
+      ),
+      'recipient_email' => array(
+        'type' => 'varchar',
+        'length' => 96,
+        'not null' => TRUE,
+        'description' => t('Email address to send the eCard to'),
+      ),
+      'recipient_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => t('Name of the recipient'),
+      ),
+      'message' => array(
+        'type' => 'text',
+        'size' => 'normal',
+        'description' => t('Message to include in the body of the eCard'),
+      ),
+      'send_date' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => 11,
+        'description' => t("When to send the ecard"),
+      ),
+      'sent' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => 11,
+        'description' => t("When the card was sent"),
+      ),
+    ),
+    'indexes' => array(
+      'opid' => array('opid'),
+      'sender_email' => array('sender_email'),
+      'recipient_email' => array('recipient_email'),
+      'nid' => array('nid'),
+      'send_date' => array('send_date'),
+      'sent' => array('sent'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Fix ecards that weren't properly logged
+ */
+function ch_ecard_update_6101() {
+  _ch_ecard_find_missing_data();
+  return array();
+}
+/**
+ * Fix ecards that weren't properly logged
+ */
+function ch_ecard_update_6102() {
+  _ch_ecard_find_missing_data();
+  return array();
+}

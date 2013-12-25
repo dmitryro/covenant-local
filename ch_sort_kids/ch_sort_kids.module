@@ -1,0 +1,98 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_menu()
+ */
+function ch_sort_kids_menu() {
+  $items['admin/content/kids'] = array(
+    'title' => t('Sort Kid Profiles'),
+    'description' => t('Provides a drag-and-drop UI for changing the order that kids will appear on the "Our Kids" page'),
+    'page callback' => 'ch_sort_kids_display',
+    'access arguments' => array('edit any kid_profile content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+/**
+ * Implementation of hook_theme()
+ */
+function ch_sort_kids_theme() {
+  return array(
+    'ch_sort_kids_display_form' => array(
+      'template' => 'ch_sort_kids-display-form',
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+function ch_sort_kids_get_profiles( $rebuild = FALSE ) {
+  static $profiles;
+  
+  if ( !$rebuild && $profiles ) {
+    return $profiles;
+  }
+  
+  $profiles = array();
+  
+  $result = db_query("SELECT DISTINCT n.nid FROM {node} n LEFT JOIN {content_field_weight} w ON n.nid=w.nid WHERE type='kid_profile' AND STATUS <> 0 ORDER BY w.field_weight_value");
+  $rows = array();
+  while ( $row = db_fetch_object($result) ) {
+    $node = node_load($row->nid);
+    $row = array(
+      'nid' => $node->nid,
+      'title' => $node->title,
+      'path' => $node->path,
+      'name' => $node->field_name[0]['value'],
+      'weight' => $node->field_weight[0]['value'],
+    );
+    if (!$row['weight']) { $row['weight'] = 0; }
+    $profiles[$node->nid] = $row;
+  }
+  
+  return $profiles;
+}
+
+function ch_sort_kids_display() {
+  $header = '<p>'.t('Drag and drop the rows below to sort the order of the Kid Profiles. Only the top 28 profiles will appear in the "').l('Our Kids', 'ourkids').t('" page.').'</p>';
+  $rows = ch_sort_kids_get_profiles();
+  return $header.drupal_get_form('ch_sort_kids_display_form', $rows);
+}
+
+function ch_sort_kids_display_form( &$form_state, $profiles ) {
+  $form = array(
+    '#tree' => TRUE,
+  );
+  foreach( $profiles as $nid => $data ) {
+    $form['profiles'][$nid]['weight'] = array(
+      '#type' => 'weight',
+      '#default_value' => $data['weight'],
+      '#delta' => 49,
+      '#attributes' => array(
+        'class' => 'kid_profile-weight',
+      ),
+    );
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save order'),
+  );
+  return $form;
+}
+
+function template_preprocess_ch_sort_kids_display_form( &$variables ) {
+  $variables['profiles'] = ch_sort_kids_get_profiles();
+  foreach( $variables['profiles'] as $nid => $data ) {
+    $variables['profiles'][$nid]['select'] = drupal_render($variables['form']['profiles'][$nid]['weight']);
+    $variables['profiles'][$nid]['link'] = l($variables['profiles'][$nid]['title'], $variables['profiles'][$nid]['path']);
+  }
+  $variables['form_submit'] = drupal_render($variables['form']);
+}
+
+function ch_sort_kids_display_form_submit( $form, &$form_state ) {
+  foreach( $form_state['values']['profiles'] as $nid => $data ) {
+    $node = node_load($nid);
+    $node->field_weight[0]['value'] = $data['weight'];
+    node_save($node);
+  }
+}

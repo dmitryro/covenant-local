@@ -1,0 +1,6 @@
+; $Id$
+name = Sort Kids
+description = "Provides a UI for arranging the kid_profile thumbnails"
+package = Covenant House
+core = 6.x
+version = 1.0

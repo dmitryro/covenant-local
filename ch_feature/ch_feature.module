@@ -1,0 +1,171 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_theme()
+ */
+function ch_feature_theme() {
+  return array(
+    'ch_feature_gift' => array(
+      'arguments' => array('item' => NULL),
+      'template' => 'ch-feature-gift',
+    ),
+    'ch_feature_ecard' => array(
+      'arguments' => array('item' => NULL),
+      'template' => 'ch-feature-ecard',
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_block()
+ */
+function ch_feature_block( $op = 'list', $delta = 0, $edit = array() ) {
+  switch($op) {
+    case 'list':
+      $blocks[0]['info'] = t('Featured Item');
+      $blocks[0]['cache'] = BLOCK_NO_CACHE;
+      $blocks[1]['info'] = t('Featured Gift');
+      $blocks[1]['cache'] = BLOCK_NO_CACHE;
+      $blocks[2]['info'] = t('Featured eCard');
+      $blocks[2]['cache'] = BLOCK_NO_CACHE;
+      return $blocks;
+    case 'configure':
+      switch ($delta) {
+        case 1:
+          $form = array();
+          $form['ch_feature_featured_gift'] = array(
+            '#type' => 'select',
+            '#title' => t('Featured Gift'),
+            '#default_value' => variable_get('ch_feature_featured_gift', ''),
+            '#options' => ch_feature_gift_options(),
+            '#description' => t('Select the gift to feature on the Gift Catalog page.'),
+          );
+          return $form;
+        case 2:
+          $form = array();
+          $form['ch_feature_featured_ecard'] = array(
+            '#type' => 'select',
+            '#title' => t('Featured eCard'),
+            '#default_value' => variable_get('ch_feature_featured_ecard', ''),
+            '#options' => ch_feature_ecard_options(),
+            '#description' => t('Select the eCard to feature on the eCard Catalog page.'),
+          );
+          return $form;
+      }
+      break;
+    case 'save':
+      switch ($delta) {
+        case 1:
+          variable_set('ch_feature_featured_gift', (int)$edit['ch_feature_featured_gift']);
+          break;
+        case 2:
+          variable_set('ch_feature_featured_ecard', (int)$edit['ch_feature_featured_ecard']);
+          break;
+      }
+      break;
+    case 'view':
+      switch ( $delta ) {
+        case 0:
+          $nid = 0;
+          $block['subject'] = $block['content'] = '';
+          // Get the $nid of the ask_box set for the current node
+          if ( arg(0) == 'node' && is_numeric(arg(1)) ) {
+            $node = node_load(arg(1));
+            if ( isset($node->field_ask_box['0']) ) {
+              $nid = $node->field_ask_box['0']['nid'];
+            }
+          }
+          if ( !$nid ) { // No ask_box set. Get the default value for field_ask_box
+			if ($node->nid == 78) {
+				$nid = 61;
+			}
+			else {
+				$settings = unserialize(db_result(db_query("SELECT widget_settings FROM {content_node_field_instance} WHERE field_name='%s' AND type_name='%s'", array('field_ask_box', 'page'))));
+	            if ( is_array($settings['default_value']) ) {
+	              $nid = $settings['default_value']['0']['nid'];
+	            }
+			}
+          }
+          if ( !$nid ) { // No default set, either. Get first published ask_box
+            $result = db_result(db_query("SELECT nid FROM {node} WHERE type='%s' AND status=%d ORDER BY created ASC LIMIT 1", array('ask_box', 1)));
+            if ( is_numeric($result) ) {
+              $nid = $result;
+            }
+          }
+          if ( $nid ) { // this will only be false if there is no ask_box published
+            $node = node_load($nid);
+            $block['content'] = node_view($node);
+          }
+          return $block;
+        case 1:
+          $nid = variable_get('ch_feature_featured_gift', '');
+          if ( !$nid ) { return array('content' => ''); }
+          $item = node_load($nid);
+          $block['subject'] = '';
+          $block['content'] = theme('ch_feature_gift', $item);
+          return $block;
+        case 2:
+          $nid = variable_get('ch_feature_featured_ecard', '');
+          if ( !$nid ) { return array('content' => ''); }
+          $item = node_load($nid);
+          $block['subject'] = '';
+          $block['content'] = theme('ch_feature_ecard', $item);
+          return $block;
+      }
+      break;
+  }
+}
+
+function ch_feature_gift_options() {
+  $options = array();
+  $result = db_query("SELECT nid, title FROM {node} WHERE status <> 0 AND type='gift_item'");
+  while ( $row = db_fetch_object($result) ) {
+    $options[$row->nid] = $row->title;
+  }
+  return $options;
+}
+
+function ch_feature_ecard_options() {
+  $options = array();
+  $result = db_query("SELECT nid, title FROM {node} WHERE status <> 0 AND type='ecard'");
+  while ( $row = db_fetch_object($result) ) {
+    $options[$row->nid] = $row->title;
+  }
+  return $options;
+}
+
+function template_preprocess_ch_feature_gift( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_feature').'/ch_feature_gift.css');
+  $item = $variables['item'];
+  //ch_feature_debug($variables);
+  $variables['price'] = '$'.((int)$item->sell_price);
+  $variables['description'] = $item->body;
+  $variables['add_to_cart'] = theme('uc_product_add_to_cart', $item);
+  if ( $item->field_image[0]['filepath'] ) {
+    $variables['image'] = '<img src="'.url($item->field_image[0]['filepath']).'" alt="'.$item->field_image[0]['data']['alt'].'" />';
+  }
+}
+function template_preprocess_ch_feature_ecard( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_feature').'/ch_feature_gift.css');
+  drupal_add_js(drupal_get_path('module', 'ch_gift_catalog').'/scripts/ch_gift_catalog.js');
+  $item = $variables['item'];
+  foreach ( $item->taxonomy as $term ) {
+    if ( $term->vid == 3 ) {
+      $variables['title'] = $term->name;
+      break;
+    }
+  }
+  $variables['price'] = '$'.((int)$item->sell_price);
+  $variables['description'] = $item->field_feature_text[0]['value'];
+  $variables['add_to_cart'] = l('Customize', 'donate/ecard/customize/'.$item->nid, array('attributes'=>array('rel'=>'lightmodal')));
+  if ( $item->field_image_cache[0]['filepath'] ) {
+    $variables['image'] = '<img src="'.url($item->field_image_cache[0]['filepath']).'" alt="'.$item->field_image[0]['data']['alt'].'" />';
+  }
+}
+
+function ch_feature_form_alter( &$form, $form_state, $form_id) {
+  if ( strpos( $form_id, 'uc_product_add_to_cart_form' ) === 0 ) {
+    $form['qty']['#title'] = t('Quantity');
+  }
+}

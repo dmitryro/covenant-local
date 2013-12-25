@@ -1,0 +1,339 @@
+<?php
+
+require_once('ch_subscriptions.kintera.inc');
+
+/**
+ * Implementation of hook_theme
+ */
+function ch_subscriptions_theme() {
+  return array(
+    'ch_subscriptions_newsletter_label' => array(
+      'arguments' => array('node' => NULL),
+    ),
+  );
+}
+
+/**
+ * Get a list of currently active newsletters
+ */
+function ch_subscriptions_list( $theme = '' ) {
+  $newsletters = array();
+  $result = db_query("SELECT nid FROM {node} WHERE type='%s' AND status <> 0", 'newsletter');
+  while ( $row = db_fetch_object($result) ) {
+    $node = node_load($row->nid);
+    if ( $theme ) {
+      $newsletters[$node->nid] = theme($theme, $node);
+    } else {
+      $newsletters[$node->nid] = $node;
+    }
+  }
+  return $newsletters;
+}
+
+/**
+ * Edit the subscription form to use newsletter nodes as options
+ */
+function ch_subscriptions_form_webform_client_form_79_alter( &$form, $form_state ) {
+  //ch_debug($form);
+  $form['submitted']['newsletters']['#title'] = '';
+  $form['submitted']['newsletters']['#options'] = ch_subscriptions_list('ch_subscriptions_newsletter_label');
+  $default = array();
+  if ( $_GET['r'] == 'on' && isset($form['submitted']['newsletters']['#options'][49]) ) {
+    $default[] = 49;
+  }
+  if ( $_GET['a'] == 'on' && isset($form['submitted']['newsletters']['#options'][50]) ) {
+    $default[] = 50;
+  }
+  if ( (!$default || $_GET['b'] == 'on') && isset($form['submitted']['newsletters']['#options'][48]) ) {
+    $default[] = 48;
+  }
+  if ( $default ) {
+    $form['submitted']['newsletters']['#default_value'] = $default;
+  }
+  
+  $state_select =  uc_zone_select(uc_get_field_name('zone'), NULL, NULL, uc_store_default_country(), 'name', FALSE);
+  $form['submitted']['state']['#options'] = $state_select['#options'];
+  $form['submitted']['state']['#default_value'] = $state_select['#default_value'];
+  $country_select =  uc_country_select(uc_get_field_name('country'), NULL, NULL, 'name', FALSE);
+  $form['submitted']['country']['#options'] = $country_select['#options'];
+  $form['submitted']['country']['#default_value'] = $country_select['#default_value'];
+  array_unshift($form['#submit'], 'ch_subscriptions_subscription_form_submit');
+}
+
+/**
+ * Add any subscriptions to the DB
+ */
+function ch_subscriptions_subscription_form_submit( $form, &$form_state ) {
+  if ( is_numeric($form_state['values']['submitted']['country']) ) {
+    $form_state['values']['submitted']['country'] = uc_country_get_by_id($form_state['values']['submitted']['country']);
+  }
+  if ( is_numeric($form_state['values']['submitted']['state']) ) {
+    $form_state['values']['submitted']['state'] = db_result(db_query("SELECT zone_code FROM {uc_zones} WHERE zone_id = %d", $form_state['values']['submitted']['state']));
+  }
+  $newsletters = array_keys($form_state['values']['submitted']['newsletters']);
+  foreach ( $form_state['values']['submitted']['newsletters'] as $nid => $value ) {
+    if ( $value ) {
+      ch_subscriptions_subscribe($form_state['values']['submitted'], $nid);
+    }
+  }
+}
+
+function theme_ch_subscriptions_newsletter_label( $node ) {
+  return '<span class="title">'.$node->title.'</span><span class="description">'.filter_xss($node->body, array('a', 'em', 'strong', 'code')).'</span>';
+}
+
+/**
+ * Add a subscription to a newsletter
+ */
+function ch_subscriptions_subscribe( $contact = array(), $nid ) {
+  if ( !is_array($contact) ) { return; }
+  if ( !$contact['email'] ) { return; }
+  if ( is_array($nid) ) {
+    foreach ( $nid as $id ) {
+      ch_subscriptions_subscribe($contact, $id);
+    }
+    return;
+  }
+  $node = node_load($nid);
+  if ( $node->type != 'newsletter' ) {
+    return;
+  }
+  $keys = array('email', 'first_name', 'last_name', 'address_1', 'address_2', 'city', 'state', 'postal_code', 'country', 'telephone');
+  foreach ( $keys as $key ) {
+    if ( isset($contact[$key]) ) {
+      $params[] = $contact[$key];
+    } else {
+      $params[] = '';
+    }
+  }
+  $params[] = $nid;
+  $params[] = time();
+  $tracking = new SankyOrigins();
+  $tracking->track();
+  $tracking = $tracking->getOriginInformation();
+  if ( $tracking['origin'] ) {
+    $params[] = $tracking['origin'];
+  } else {
+    $params[] = '';
+  }
+  
+  $sql = "INSERT INTO {ch_subscriptions} (email, first_name, last_name, address_1, address_2, city, state, postal_code, country, telephone, newsletter, created, origin) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, %d, '%s')";
+  db_query($sql, $params);
+  
+  ch_kintera_add_to_kintera($contact, 'subscription', array('nid' => $nid));
+}
+
+/**
+ * Remove a newsletter subscription
+ */
+function ch_subscriptions_unsubscribe( $email, $nid ) {
+  db_query("DELETE FROM {ch_subscriptions} WHERE email='%s' AND newsletter=%d", $email, $nid);
+}
+
+/**
+ * Implementation of hook_checkout_pane()
+ * Adds a subscription form to the checkout page
+ */
+function ch_subscriptions_checkout_pane() {
+  $panes = array();
+  
+  $panes[] = array(
+    'id' => 'subscribe',
+    'title' => t('Subscribe to our e-newsletters'),
+    'callback' => 'ch_subscriptions_checkout_pane_subscribe',
+    'desc' => t('Provides a subscription checklist'),
+    'weight' => 10,
+    'process' => FALSE,
+    'collapsible' => FALSE
+  );
+  
+  return $panes;
+}
+
+function ch_subscriptions_checkout_pane_subscribe( $op, &$order, $arg2 ) {
+  switch ( $op ) {
+    case 'view':
+      $description = '';
+      $contents = array();
+      $default = array();
+      if ( $_GET['r'] == 'on' ) {
+        $default[] = 49;
+      }
+      if ( $_GET['a'] == 'on' ) {
+        $default[] = 50;
+      }
+      if ( (!$default || $_GET['b'] == 'on') ) {
+        $default[] = 48;
+      }
+      
+      $contents['subscriptions'] = array(
+        '#title' => '',
+        '#type' => 'checkboxes',
+        '#description' => '',
+        '#options' => ch_subscriptions_list('ch_subscriptions_newsletter_label'),
+        '#default_value' => $default,
+      );
+      return array( 'description' => $description, 'contents' => $contents );
+    case 'process':
+      $contact = array(
+        'email' => $order->primary_email,
+        'first_name' => $order->delivery_first_name,
+        'last_name' => $order->delivery_last_name,
+        'address_1' => $order->delivery_street1,
+        'address_2' => $order->delivery_street2,
+        'city' => $order->delivery_city,
+        'state' => $order->delivery_zone,
+        'postal_code' => $order->delivery_postal_code,
+        'country' => uc_country_get_by_id($order->delivery_country),
+        'telephone' => $order->delivery_phone,
+      );
+      foreach( $arg2['subscriptions'] as $key => $value ) {
+        if ( $value != 0 ) {
+          ch_subscriptions_subscribe($contact, $key);
+        }
+      }
+      break;
+  }
+}
+
+
+/*************************************************************
+ * VIEWS HOOKS
+ *************************************************************/
+function ch_subscriptions_views_api() {
+  return array(
+    'api' => 2,
+  );
+}
+ 
+function ch_subscriptions_views_data() {
+  $data = array();
+  $data['ch_subscriptions']['table']['group'] = t('Subscription');
+  $data['ch_subscriptions']['table']['join'] = array(
+    'node' => array(
+      'left_field' => 'nid',
+      'field' => 'newsletter',
+    ),
+  );
+  $data['ch_subscriptions']['sid'] = array(
+    'title' => t('Subscription ID'),
+    'help' => t('ID for this subscription record'),
+    'field' => array(
+      'handler' => 'views_handler_field_numeric',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['email'] = array(
+    'title' => t('Email Address'),
+    'help' => t('Email address to which a newsletter is sent'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['first_name'] = array(
+    'title' => t('First Name'),
+    'help' => t('First name of the subscriber'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['last_name'] = array(
+    'title' => t('Last Name'),
+    'help' => t('Last name of the subscriber'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['postal_code'] = array(
+    'title' => t('Postal Code'),
+    'help' => t('Postal code of the subscriber'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['origin'] = array(
+    'title' => t('Origin Code'),
+    'help' => t('Origin code associated with the subscription'),
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  $data['ch_subscriptions']['created'] = array(
+    'title' => t('Subscription Date'),
+    'help' => t('Date the subscription request was made'),
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_date',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+  
+  return $data;
+}

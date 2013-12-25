@@ -1,0 +1,7 @@
+; $Id$
+name = Newsletter Subscriptions
+description = "Utilities for handling newsletter subscriptions"
+package = Covenant House
+core = 6.x
+version = 1.0.1
+dependencies[] = uc_store

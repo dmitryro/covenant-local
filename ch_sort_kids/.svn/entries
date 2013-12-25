@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="57"
+   name=""
+   committed-date="2009-08-30T22:01:01.857529Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_sort_kids"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="57"
+   name="ch_sort_kids.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-30T22:01:01.857529Z"
+   checksum="6e1a911fd0850c8a18739a974b37a83b"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="56"
+   name="ch_sort_kids-display-form.tpl.php"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-30T21:18:12.968165Z"
+   checksum="b5fdaa548f89631cec3ee908cd417db9"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="56"
+   name="ch_sort_kids.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-30T21:18:12.968165Z"
+   checksum="5af5d68e802b9eff10e358a165c4bbb8"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

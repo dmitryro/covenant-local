@@ -1,0 +1,8 @@
+; $Id$
+name = CH Online Donations
+description = "Creates a donation form"
+package = Covenant House
+core = 6.x
+version = 1.0
+dependencies[] = uc_cart
+dependencies[] = uc_product

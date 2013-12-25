@@ -1,0 +1,6 @@
+; $Id$
+name = CH Cart
+description = "Edits the cart form"
+package = Covenant House
+core = 6.x
+version = 1.0

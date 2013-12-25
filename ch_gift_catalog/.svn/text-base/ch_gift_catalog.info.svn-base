@@ -1,0 +1,6 @@
+; $Id$
+name = Gift Catalogue
+description = "Creates a block that displays the gift catalog."
+package = Covenant House
+core = 6.x
+version = 1.0

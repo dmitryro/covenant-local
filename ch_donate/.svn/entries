@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="355"
+   name=""
+   committed-date="2010-01-26T01:22:16.351019Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_donate"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="354"
+   name="ch_donate.js"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2010-01-26T01:18:36.680646Z"
+   checksum="9af05f602d79c62bc3d139fe2f57170c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="187"
+   name="ch_donate.admin.inc"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-10-08T13:37:11.598317Z"
+   checksum="1e60098d4168083c90331cc746b13fdc"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="354"
+   name="ch_donate.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2010-01-26T01:18:36.680646Z"
+   checksum="fb2f19da882db3d981832d6255989862"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="355"
+   name="ch_donate.css"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2010-01-26T01:22:16.351019Z"
+   checksum="e10920593f78eb68df1022362f77d05a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch_donate.ca.inc"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="e8496622d187d8b75fd3440a3cebc4c5"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch_donate.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="af0d2a1cf8592dba8f2d9cc2efbbe4cc"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

@@ -1,0 +1,71 @@
+<?php
+
+/** 
+ * Implementation of hook_install()
+ * This needs to come after uc_paypal to work properly
+ */
+function ch_ec_install() {
+  $weight = db_result(db_query("SELECT weight FROM {system} WHERE name='%s' AND type='%s'", 'uc_paypal', 'module'));
+  if ( $weight ) {
+    $weight += 1;
+  } else {
+    $weight = 1;
+  }
+  db_query("UPDATE {system} SET weight=%d WHERE name='%s' AND type='%s'", $weight, 'ch_ec', 'module');
+  
+  drupal_install_schema('ch_ec');
+}
+
+function ch_ec_uninstall() {
+  drupal_uninstall_schema('ch_ec');
+}
+
+
+/**
+ * Implementation of hook_schema()
+ */
+function ch_ec_schema() {
+  $schema['ch_express_checkout_recurring_payments'] = array(
+    'description' => t('Contains info about recurring payments made through Express Checkout'),
+    'fields' => array(
+      'ProfileID' => array(
+        'type' => 'varchar',
+        'length' => 14,
+        'not null' => TRUE,
+        'description' => t('The ProfileID provided by PayPal'),
+      ),
+      'ProfileStatus' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'description' => t('The ProfileStatus provided by PayPal'),
+      ),
+      'order_id' => array(
+        'description' => t('The order ID of the initial order'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'lastPaymentDate' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => 11,
+        'description' => t("Timestamp of the last payment"),
+      ),
+    ),
+    'primary key' => array('ProfileID'),
+    'indexes' => array(
+      'order_id' => array('order_id'),
+      'ProfileStatus' => array('ProfileStatus'),
+      'lastPaymentDate' => array('lastPaymentDate'),
+    ),
+  );
+  return $schema;
+}
+
+function ch_ec_update_6101() {
+  drupal_install_schema('ch_ec');
+  return array();
+}

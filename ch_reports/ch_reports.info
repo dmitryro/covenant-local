@@ -1,0 +1,8 @@
+; $Id$
+name = Reports
+description = "A collection of reports"
+package = Covenant House
+core = 6.x
+version = 1.0
+dependencies[] = ch_subscriptions
+dependencies[] = uc_order

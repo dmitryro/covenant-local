@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="330"
+   name=""
+   committed-date="2009-12-08T02:06:31.252193Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_feature"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="ch_feature.info"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="5a8c1629872a2872edd2dcea0a892cdd"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-feature-ecard.tpl.php"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="e749718aaccd38c3b60b4059235a8d6a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   name="images"
+   kind="dir"/>
+<entry
+   committed-rev="330"
+   name="ch_feature_gift.css"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-12-08T02:06:31.252193Z"
+   checksum="8ef36ba222b1ef9c1dd3e4db86bc3a68"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="306"
+   name="ch_feature.module"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-11-18T20:21:43.972874Z"
+   checksum="22f3abe7aee05ea62bacd531596cdf3c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+<entry
+   committed-rev="46"
+   name="ch-feature-gift.tpl.php"
+   text-time="2010-01-26T01:30:56.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="4c11c8297f8e4af67d80fde15e8c938d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:56.000000Z"/>
+</wc-entries>

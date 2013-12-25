@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function ch_payflow_sync_install() {
+  variable_set('ch_payflow_sync_last_profile', 1);
+  db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status='U'");
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function ch_payflow_sync_uninstall() {
+  variable_del('ch_payflow_sync_last_profile');
+  db_query("UPDATE {uc_payflowpro_recurring_profiles} SET pfp_status=0 WHERE pfp_status='U'");
+}

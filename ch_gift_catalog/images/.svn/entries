@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="46"
+   name=""
+   committed-date="2009-08-29T22:30:01.473527Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/ch_gift_catalog/images"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="46"
+   name="enlarge-green.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="a4ad47ff02fb01529cc279cc65bb53b7"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="sort-asc.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="904a4c0bfc579cbc65a71673143ff300"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="enlarge.png"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="a31979c34f7281c1d617eafc0cfc61d1"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="preview-green.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="fc9a1529bdb9031c39df087e3e87b25d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="customize.png"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="a5959070c1d1086b21a36439ffc1b48a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="enlarge-blue.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="822801b2d7f79afb4f9c2f5967f7e0ed"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="add-to-cart-green-bg.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="4eb1baa1cdc47ae389792df4692d7a9d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="sort-desc.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="b362b8b6d876b7d3a059a5b21b39400a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="catalog-prev-page-arrow.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="556c9d2d73e838e9d0b07ea330d19db7"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="catalog-next-page-arrow.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="05cfa1794bea433ca09d8b92e8c92df1"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+<entry
+   committed-rev="46"
+   name="add-to-cart-blue-bg.gif"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-08-29T22:30:01.473527Z"
+   checksum="ca5b9b18e0e7305e11dd0ad2cee4325a"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:59.000000Z"/>
+</wc-entries>

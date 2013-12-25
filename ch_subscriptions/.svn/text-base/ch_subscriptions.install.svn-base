@@ -1,0 +1,114 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function ch_subscriptions_install() {
+  // Create tables
+  drupal_install_schema('ch_subscriptions');
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function ch_subscriptions_uninstall() {
+  // Delete tables
+  drupal_uninstall_schema('ch_subscriptions');
+}
+
+/**
+ * Implementation of hook_schema()
+ */
+function ch_subscriptions_schema() {
+  $schema['ch_subscriptions'] = array(
+    'description' => t('Records new subscription info'),
+    'fields' => array(
+      'sid' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The subscription ID'),
+      ),
+      'email' => array(
+        'type' => 'varchar',
+        'length' => 96,
+        'not null' => TRUE,
+        'description' => t('Email address to send the subscription to'),
+      ),
+      'first_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'last_name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'address_1' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'address_2' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'city' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'state' => array(
+        'type' => 'varchar',
+        'length' => 4,
+      ),
+      'postal_code' => array(
+        'type' => 'varchar',
+        'length' => 10,
+      ),
+      'country' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'telephone' => array(
+        'type' => 'varchar',
+        'length' => 20,
+      ),
+      'newsletter' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'description' => t("Node ID for the newsletter subscribed to"),
+      ),
+      'origin' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => t("The origin code from the Session variable, if set"),
+      ),
+      'created' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'disp-width' => 11,
+        'description' => t("Timestamp of when the code was generated"),
+      ),
+    ),
+    'primary key' => array('sid'),
+    'indexes' => array(
+      'created' => array('created'),
+      'email' => array('email'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Add origin field
+ */
+function ch_subscriptions_update_6000() {
+  $ret = array();
+  $spec = array(
+    'type' => 'varchar',
+    'length' => 255,
+    'description' => t("The origin code from the Session variable, if set"),
+  );
+  db_add_field($ret, 'ch_subscriptions', 'origin', $spec);
+  return $ret;
+}

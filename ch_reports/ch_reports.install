@@ -1,0 +1,141 @@
+<?php
+
+/**
+ * Implementation of hook_install()
+ */
+function ch_reports_install() {
+  // Create tables
+  drupal_install_schema('ch_reports');
+  
+  // Add any data stored in uc_orders table to the new table
+  $result = db_query("SELECT order_id, data FROM uc_orders WHERE data LIKE '%%%s%%'", 'ch_origin');
+  
+  while ( $row = db_fetch_object($result) ) {
+    $data = unserialize($row->data);
+    if ( $data['ch_origin'] ) {
+      db_query("INSERT INTO ch_order_origin (order_id, origin) VALUES (%d, '%s')", $row->order_id, $data['ch_origin']);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_uninstall()
+ */
+function ch_reports_uninstall() {
+  // Delete tables
+  drupal_uninstall_schema('ch_reports');
+}
+
+/**
+ * Implementation of hook_schema()
+ */
+function ch_reports_schema() {
+  $schema['ch_order_origin'] = array(
+    'description' => t('Records origin info for orders'),
+    'fields' => array(
+      'origin_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The record ID'),
+      ),
+      'order_id' => array(
+        'description' => t('The order ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'origin' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => t("The origin code from the Session variable, if set"),
+      ),
+      'secondary' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => t("0 if this was the last origin code set, 1 otherwise"),
+      ),
+    ),
+    'primary key' => array('origin_id'),
+    'indexes' => array(
+      'order_id' => array('order_id'),
+      'origin' => array('origin'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Add the ch_order_origin table
+ * Add old data from uc_orders data field
+ */
+function ch_reports_update_6000() {
+  $table = array(
+    'description' => t('Records origin info for orders'),
+    'fields' => array(
+      'origin_id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The record ID'),
+      ),
+      'order_id' => array(
+        'description' => t('The order ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'origin' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => t("The origin code from the Session variable, if set"),
+      ),
+    ),
+    'primary key' => array('origin_id'),
+    'indexes' => array(
+      'order_id' => array('order_id'),
+      'origin' => array('origin'),
+    ),
+  );
+  $ret = array();
+  db_create_table($ret, 'ch_order_origin', $table);
+  
+  $result = db_query("SELECT order_id, data FROM uc_orders WHERE data LIKE '%%%s%%'", 'ch_origin');
+  
+  while ( $row = db_fetch_object($result) ) {
+    $data = unserialize($row->data);
+    if ( $data['ch_origin'] ) {
+      db_query("INSERT INTO ch_order_origin (order_id, origin) VALUES (%d, '%s')", $row->order_id, $data['ch_origin']);
+    }
+  }
+  
+  return $ret;
+}
+
+/**
+ * Separate separate origin codes into distinct records
+ */
+function ch_reports_update_6101() {
+  $result = db_query("SELECT * FROM {ch_order_origin} WHERE origin LIKE '%%|%%'");
+  while ( $row = db_fetch_object($result) ) {
+    $codes = explode('|', $row->origin);
+    foreach ( $codes as $code ) {
+      db_query("INSERT INTO {ch_order_origin} (order_id, origin) VALUES (%d, '%s')", $row->order_id, $code);
+    }
+    db_query("DELETE FROM {ch_order_origin} WHERE origin_id=%d AND order_id=%d", $row->origin_id, $row->order_id);
+  }
+  return array();
+}
+
+/**
+ * Add the `secondary` field to the `ch_order_origin` table
+ */
+function ch_reports_update_6102() {
+  $ret = array();
+  db_add_field($ret, 'ch_order_origin', 'secondary', array( 'type' => 'int', 'size' => 'tiny', 'not null' => TRUE, 'default' => 0 ));
+  return $ret;
+}

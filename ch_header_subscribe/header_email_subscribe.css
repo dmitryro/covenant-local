@@ -1,0 +1,104 @@
+@charset "UTF-8";
+
+/**
+ * Author:		Richard Castera
+ * Date:		12/9/2009
+ * Comments:	Used for the email signup in the header.	
+ **/
+#header_email_signup {
+	margin: -4px 0px 0px 0px;
+	padding: 10px; 
+	right: 6px;
+	width:238px; 
+	height:211px;
+	color: #fff;
+	position:absolute;
+	float:right; 
+	z-index:999; 
+	display:none;
+	text-align: left;
+	white-space: normal;
+    background: url('images/header-subscribe-bg.png') no-repeat 0px 0px;
+}
+
+#header_email_signup_content {
+    margin: 0px;
+    padding: 15px;
+}
+
+#header_email_signup_form {
+	margin: 0px;
+	padding: 10px 0px 0px 0px;
+}
+
+#header_email_signup_form input {
+    width: 125px;
+    margin: 0px;   
+    padding: 2px;
+    border: 1px solid #dc6e14;
+}
+
+#header_email_signup_form p {
+	margin: 0px;
+	padding: 5px 0px 0px 0px;
+}
+
+.header_email_label {
+    margin: 2px 10px 0px 0px;
+    padding: 0px;
+    float: left;
+    width: 65px;
+}
+
+/**
+#header_email_signup_newsletters {
+    margin: 0px;
+	padding: 10px 0px 5px 0px;
+	font-size: 12px;
+    clear: both;
+}
+
+#header_email_signup_newsletters p {
+	margin: 0px;
+	padding: 0px;
+}
+
+#header_email_signup_newsletters input {
+    margin: 2px 0px 0px 0px;    
+}
+
+#header_email_signup_newsletters label {
+    font-size: 11px;    
+}
+**/
+
+#header_email_signup_msg {
+    margin: 10px 0px 0px 0px;
+	padding: 5px;
+	width: 100px;
+	height: 14px;
+    font-size: 11px;
+	float: left;
+	text-align: center;
+}
+
+.header_email_signup_failure {
+	background-color: #d20404;
+	border: 1px solid #980303;	
+}
+
+#header_email_signup_submit {
+	margin: 7px 0px 0px 0px !important;
+	float: right;
+	color: #fff;
+	cursor: pointer;
+	width: 93px !important;
+    height: 35px;
+    text-indent: -9999px !important;
+    border: 0px none !important;
+    background: url('images/header-subscribe-submit.png') no-repeat 0px 0px
+}
+
+#header_email_signup_submit:hover {
+	background: url('images/header-subscribe-submit.png') no-repeat -93px 0px
+}

@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * Implementation of hook_form_alter() for uc_cart_view_form
+ */
+function ch_cart_form_uc_cart_view_form_alter( &$form, $form_state ) {
+  unset($form['items']['#columns']['image']);
+  $form['items']['#columns']['total']['weight'] = 5;
+  $form['items']['#columns']['qty']['cell'] = 'Quantity';
+  $form['items']['#columns']['desc']['cell'] = 'Item';
+  $form['items']['#columns']['unit_price'] = array(
+    'cell' => 'Price',
+    'weight' => 4,
+  );
+  
+  $subtotal = 0;
+  foreach( element_children($form['items']) as $i ) {
+    if ( $form['items'][$i]['nid']['#value'] ) {
+      $item = node_load($form['items'][$i]['nid']['#value']);
+      //ch_cart_debug($form['items'][$i]);
+      $data = unserialize($form['items'][$i]['data']['#value']);
+      
+      // have to build our own subtotal so we can theme it differently
+      $subtotal += $form['items'][$i]['#total'];
+      unset($form['items'][$i]['image']);
+      $form['items'][$i]['desc']['#value'] = '<h3>'.$item->title.'</h3><div class="description">'.$item->body.'</div>';
+      
+      $price = $item->sell_price;
+      if ( $data['varprice'] ) {
+        $price = $data['varprice'];
+      }
+      $form['items'][$i]['unit_price'] = array(
+        '#value' => '<span class="unit-price">'.uc_currency_format($price).'</span>',
+        '#cell_attributes' => array( 'nowrap' => 'nowrap', 'class' => 'unit-price' ),
+      );
+    } else {
+      $form['items'][$i]['desc'] = array(
+        '#value' => 'Total',
+        '#cell_attributes' => array(
+          'colspan' => 4,
+          'align' => 'right',
+          'class' => 'subtotal-label',
+        ),
+      );
+      $context = array(
+        'revision' => 'themed-original',
+        'location' => 'cart-table-subtotal',
+      );
+      $form['items'][$i]['total'] = array(
+        '#value' => uc_price($subtotal, $context),
+        '#cell_attributes' => array(
+          'nowrap' => 'nowrap',
+          'class' => 'subtotal',
+        ),
+      );
+    }
+  }
+}

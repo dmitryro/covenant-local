@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wc-entries
+   xmlns="svn:">
+<entry
+   committed-rev="274"
+   name=""
+   committed-date="2009-11-02T15:05:05.477385Z"
+   url="svn+ssh://adeliede@adeliedesign.com/home/adeliede/svn/adelie/Clients/Sanky_Communications/Covenant_House/website/modules/covenant_house/Kintera/lib"
+   last-author="adeliede"
+   kind="dir"
+   uuid="58b6fe40-bc90-436b-8ff6-7682c82017e6"
+   revision="358"/>
+<entry
+   committed-rev="272"
+   name="class.soap_server.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="cabb4a9409340fc3e769a2aa64d9cb35"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.wsdl.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="affd37cf57305bffb31edcb6d8f3466c"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="274"
+   name="nusoapmime.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-11-02T15:05:05.477385Z"
+   checksum="ff1df14e32461e01b89cbed985656f40"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="272"
+   name="changelog"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="e39245c8f5e2f1c713b7f72aa9639a47"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.soap_fault.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="06c7215e00877096d0f91241631ebcfd"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="274"
+   name="class.soap_transport_http.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-11-02T15:05:05.477385Z"
+   checksum="9af88d72ed7c8c01a018eb5d6def2f0b"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.wsdlcache.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="c34586f5a277abc549fd1e677e2cdeb8"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.soap_parser.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="28e5f7a154ea67d736a7d774af32e4d1"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="274"
+   name="class.nusoap_base.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-11-02T15:05:05.477385Z"
+   checksum="275e09d439a0ee35d5349b4370a76221"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:57.000000Z"/>
+<entry
+   committed-rev="274"
+   name="class.soapclient.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-11-02T15:05:05.477385Z"
+   checksum="a8397b26d953185fab05a0feeb55c21e"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:58.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.xmlschema.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="9614c07294782af36e30c8dd08b6b9ea"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:58.000000Z"/>
+<entry
+   committed-rev="274"
+   name="nusoap.php"
+   text-time="2010-01-26T01:30:58.000000Z"
+   committed-date="2009-11-02T15:05:05.477385Z"
+   checksum="89dc1bedc1314f96d2410bed6391689e"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:58.000000Z"/>
+<entry
+   committed-rev="272"
+   name="class.soap_val.php"
+   text-time="2010-01-26T01:30:59.000000Z"
+   committed-date="2009-10-30T20:58:13.615616Z"
+   checksum="32301b9809013b2fcabb3089054b527d"
+   last-author="adeliede"
+   kind="file"
+   prop-time="2010-01-26T01:30:58.000000Z"/>
+</wc-entries>

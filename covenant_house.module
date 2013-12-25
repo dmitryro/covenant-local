@@ -1,0 +1,295 @@
+<?php
+
+function ch_debug($variable, $type = 'status') {
+  if ( strpos($_SERVER['SERVER_NAME'], 'localhost') !== FALSE ) {
+    drupal_set_message("<pre>".htmlspecialchars(print_r($variable, true))."</pre>", $type);
+  }
+}
+
+require_once('Class.SankyOrigins.php');
+
+/**
+ * Implementation of hook_init()
+ * Track campaign origination
+ */
+function covenant_house_init() {
+  $tracking = new SankyOrigins();
+  $tracking->track();
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function covenant_house_perm() {
+  return array('edit sub-menus');
+}
+
+function covenant_house_order( $op, &$arg1, $arg2 ) {
+  switch ($op) {
+    case "new":
+      $tracking = new SankyOrigins();
+      $tracking->track();
+      $tracking = $tracking->getOriginInformation();
+      if ( $tracking['origin'] ) {
+        $arg1->data['ch_origin'] = $tracking['origin'];
+      }
+      break;
+  }
+}
+
+function covenant_house_menu_alter( &$items ) {
+  $items['admin/build/menu']['page callback'] = 'covenant_house_menu_admin_overview_page';
+  $items['admin/build/menu']['access callback'] = 'covenant_house_menu_access';
+  $items['admin/build/menu']['access arguments'] = array();
+  $items['admin/build/menu-customize/%menu']['access callback'] = 'covenant_house_menu_access';
+  $items['admin/build/menu-customize/%menu']['access arguments'] = array(3);
+  
+  $items['admin/content/node']['access arguments'] = array('view revisions');
+  $items['admin/reports']['access arguments'] = array('access administration pages');
+  $items['admin/settings']['access arguments'] = array('administer site configuration');
+  $items['admin/settings/performance_logging']['access arguments'] = array('administer site configuration');
+  $items['admin/store']['title'] = t('Detailed Donation Reporting');
+  $items['admin/user']['access arguments'] = array('administer users');
+  $items['node/%node/children']['title'] = 'Subpages';
+  $items['admin/store/orders/%uc_order/invoice']['page callback'] = 'covenant_house_order_invoice';
+}
+
+function covenant_house_menu_admin_overview_page() {
+  $result = db_query("SELECT * FROM {menu_custom} ORDER BY title");
+  $content = array();
+  while ($menu = db_fetch_array($result)) {
+    if ( covenant_house_menu_access($menu) ) {
+      $menu['href'] = 'admin/build/menu-customize/'. $menu['menu_name'];
+      $menu['localized_options'] = array();
+      $content[] = $menu;
+    }
+  }
+  return theme('admin_block_content', $content);
+}
+
+/**
+ * Determine if the user has access to edit a menu
+ */
+function covenant_house_menu_access( $menu = NULL, $user = NULL ) {
+  if(!$user || !is_object($user)) {
+    global $user;
+  }
+  //Super user can do anything
+  if( $user->uid == 1 ) {
+    return true;
+  }
+  
+  if( user_access('administer menu') ) {
+    return true;
+  }
+  
+  if( is_null($menu) || $menu['menu_name'] == 'primary-links' ) {
+    return user_access('edit sub-menus');
+  }
+  
+  return false;
+}
+
+/**
+ * Implemenation of hook_form_alter()
+ */
+function covenant_house_form_user_login_block_alter( &$form, $form_state ) {
+  $form['#action'] = url($_GET['q']);
+  $form['#submit'][] = 'covenant_house_login_submit';
+}
+function covenant_house_form_user_login_alter( &$form, $form_state ) {
+  $form['#submit'][] = 'covenant_house_login_submit';
+}
+
+function covenant_house_form_uc_order_mail_invoice_form_alter( &$form, $form_state ) {
+  $form['#submit'] = array('covenant_house_order_mail_invoice_form_submit');
+}
+
+/**
+ * Prevent users from editing top-level menu items
+ */
+function covenant_house_form_menu_overview_form_alter( &$form, $form_state ) {
+  foreach (element_children($form) as $mlid) {
+    if (isset($form[$mlid]['hidden'])) {
+      $element = &$form[$mlid];
+      if ( $element['#item']['plid'] == 0 && !user_access('administer menu') ) {
+        $element['hidden']['#access'] = FALSE;
+        $element['expanded']['#access'] = FALSE;
+        $element['weight']['#access'] = FALSE;
+        $element['operations']['#access'] = FALSE;
+        //$element['plid']['#access'] = FALSE;
+      }
+    }
+  }
+  $form['#validate'][] = 'covenant_house_menu_overview_form_validate';
+}
+
+/**
+ * Validation function for menu_overview_form
+ * Prevents users from editing top-level items without permission
+ */
+function covenant_house_menu_overview_form_validate( $form, &$form_state ) {
+  if ( !user_access('administer menu') ) {
+    $fields = array('expanded', 'weight', 'plid', 'hidden');
+    foreach (element_children($form) as $mlid) {
+      if (isset($form[$mlid]['#item'])) {
+        $element = $form[$mlid];
+        if ( $element['#item']['plid'] == 0 ) {
+          foreach ($fields as $field) {
+            if ( $form_state['values'][$mlid][$field] != $element[$field]['#default_value'] ) {
+              form_set_error($mlid, t('You do not have permission to edit top-level menu items'));
+            }
+          }
+        } else {
+          if ( $form_state['values'][$mlid]['plid'] == 0 ) {
+            form_set_error($mlid, t('You do not have permission to add top-level menu items'));
+          }
+        }
+      }
+    }
+  }
+}
+
+function covenant_house_form_alter( &$form, $form_state, $form_id ) {
+  if ( isset($form['#node']) && isset($form['type']) ) {
+    if ( isset($form['#field_info']['field_image']) ) {
+      $form['#after_build'][] = 'covenant_house_after_build';
+    }
+    $form['title']['#title'] = t('Headline/H1');
+  }
+  
+  // Restrict access to the menu form
+  if ( isset($form['#node']) && $form['#node']->type .'_node_form' == $form_id && isset($form['menu']) ) {
+    $item = $form['#node']->menu;
+    if ( $form['menu']['#access'] == FALSE ) { // i.e., user doesn't already have full access
+      if ( !$item['mlid'] || ( $item['menu_name'] == 'primary-links' && $item['plid'] > 0 ) ) { // either it's not in the menu, or it's parent is non-root in the primary links menu
+        $form['menu']['#access'] = user_access('edit sub-menus');
+        if ( $form['menu']['#access'] == TRUE ) {
+          foreach( $form['menu']['parent']['#options'] as $key => $value ) {
+            if ( strpos($key, 'primary-links') !== 0 ) {
+              // hide anything not in the primary-links menu
+              unset($form['menu']['parent']['#options'][$key]);
+            } else {
+              if ( $key == 'primary-links:0' ) {
+                // can't set to be top-level
+                unset($form['menu']['parent']['#options'][$key]);
+              } elseif ( $form['menu']['parent']['#default_value'] == 'primary-links:0' ) {
+                // give a sensible default (first item) if it doesn't already exist
+                $form['menu']['parent']['#default_value'] = $key;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Redirect user to admin page after logging in
+ */
+function covenant_house_login_submit( $form, &$form_state ) {
+  $form_state['redirect'] = 'admin';
+}
+
+function covenant_house_after_build($form, &$form_state) {
+  foreach ( $form['field_image'] as $key => $field ) {
+    if ( strpos($key, '#') !== 0 && isset($field['data']['title']) ) {
+      $form['field_image'][$key]['data']['title']['#title'] = t('Caption');
+    }
+  }
+  return $form;
+}
+
+function covenant_house_order_template( $order ) {
+  if ( $order->data['language'] == 'es' ) {
+    return 'ch_customer.es';
+  } elseif ( $order->data['currency'] == 'CAD' ) {
+    return 'ch_customer.CAD';
+  } else {
+    return 'ch_customer';
+  }
+}
+
+/**
+ * Reimplement uc_order_invoice to use custom templates
+ */
+function covenant_house_order_invoice($order, $op = 'view') {
+  $output = uc_order_load_invoice($order, 'checkout-mail', covenant_house_order_template($order));
+
+  if ($op == 'print') {
+    print $output;
+    exit();
+  }
+
+  return $output;
+}
+/**
+ * Reimplement uc_order_mail_invoice_form_submit to use custom email templates
+ */
+function covenant_house_order_mail_invoice_form_submit($form, &$form_state) {
+  $order = uc_order_load($form_state['values']['order_id']);
+
+  if ($order === FALSE) {
+    drupal_set_message(t('Order @order_id does not exist.', array('@order_id' => $order_id)));
+    drupal_goto('admin/store/orders');
+  }
+
+  $recipient = check_plain($form_state['values']['email']);
+
+  $params = array('order' => $order);
+  $sent = drupal_mail('covenant_house', 'invoice', $recipient, uc_store_mail_recipient_language($recipient), $params, uc_store_email_from());
+
+  if (!$sent) {
+    drupal_set_message(t('E-mail failed.'));
+  }
+  else {
+    $message = t('Invoice e-mailed to @email.', array('@email' => $recipient));
+    drupal_set_message($message);
+    uc_order_log_changes($order->order_id, array($message));
+  }
+}
+
+function covenant_house_mail($key, &$message, $params) {
+  $langcode = isset($message['language']) ? $message['language']->language : NULL;
+
+  // Build the appropriate message paramaters based on the e-mail key.
+  switch ($key) {
+    // Setup an e-mailed invoice.
+    case 'invoice':
+      $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
+      $message['subject'] = t('Thank you for your gift', array(), $langcode);
+      $message['from'] = uc_store_email_from();
+      $message['body'][] = uc_order_load_invoice($params['order'], 'checkout-mail', covenant_house_order_template($order));
+      break;
+  }
+}
+
+
+/**
+ * @uses		Implementation of hook_menu()
+ * @author		Richard Castera
+ * @date		12-17-2009
+ * @comments	Used to display a page with resource links for Covenant House.
+ * @see			https://snac.sankyserver.com/projects/78/tickets/26
+ **/
+function covenant_house_menu() {
+	$items['ch-resources-page'] = array(
+		'title'=>t('Covenant House Resources'),
+		'page callback'=>'covenant_house_resources_page',
+		'access callback'=>'user_access',
+    	'access arguments'=>array('view reports'),
+		'type'=>MENU_NORMAL_ITEM,
+		'weight'=>15
+	);
+	
+	return $items;	
+}
+
+function covenant_house_resources_page() {
+	return '<ul>
+				<li><a href="/sites/default/files/resources/CMS Instruction Manual.pdf" target="_blank" title="CMS Manual">CMS Manual</a></li>
+				<li><a href="http://manager.paypal.com/" title="Paypal Manager" target="_blank">Paypal Manager</a></li>
+			</ul>
+	';
+}

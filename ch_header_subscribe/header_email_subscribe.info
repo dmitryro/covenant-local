@@ -1,0 +1,6 @@
+; $Id$
+name = Header Email Subscribe
+description = "Allows Visitors to Subscribe to Covenant Houses's newsletters in the header."
+package = Covenant House
+core = 6.x
+version = 1.0

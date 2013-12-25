@@ -1,0 +1,27 @@
+<?php
+// $Id$
+
+/**		
+ * @package     Covenant House    
+ * @uses        Adds a slideshow for the Slideshow content type.   
+ * @author		Richard Castera
+ * @date		6/8/2010
+ * @comment		Creates a slidehow for slideshow Content type
+ * @ticket		None. Immediate request from Molly		
+ **/
+
+
+/**
+ * @uses        Implementation of hook_init()
+ * @comments    Adds css and js files. 
+ **/
+function ch_slideshow_init() {
+    if (arg(0)=='node' && is_numeric(arg(1))) {
+        $node =  node_load(arg(1)); 
+        if($node->type == 'slideshow_page') {
+            drupal_add_js(drupal_get_path('module', 'ch_slideshow') . '/jquery.cycle.all.2.72.js');
+            drupal_add_js(drupal_get_path('module', 'ch_slideshow') . '/ch_slideshow.js');
+            drupal_add_css(drupal_get_path('module', 'ch_slideshow') . '/ch_slideshow.css');
+        }
+    }
+}

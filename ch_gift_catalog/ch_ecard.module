@@ -1,0 +1,558 @@
+<?php
+
+/**
+ * Implementation of hook_menu()
+ */
+function ch_ecard_menu() {
+  $items['donate/ecard'] = array(
+    'title' => t('Send an eCard'),
+    'page callback' => 'ch_ecard_show',
+    'access arguments' => array('access content'),
+  );
+  $items['donate/ecard/customize/%node'] = array(
+    'title' => t('Customize Your eCard'),
+    'page callback' => 'ch_ecard_customize',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+  );
+  $items['donate/ecard/customize/%node/ajax'] = array(
+    'title' => t('Customize Your eCard'),
+    'page callback' => 'ch_ecard_customize_ajax',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+  );
+  $items['donate/ecard/customize/%node/preview'] = array(
+    'title' => t('Preview Image'),
+    'page callback' => 'ch_ecard_preview',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+  );
+  $items['donate/ecard/view/%'] = array(
+    'title' => t('View Your eCard'),
+    'page callback' => 'ch_ecard_view_card',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+  );
+  $items['admin/settings/donate/ecard'] = array(
+    'title' => t('eCard Settings'),
+    'description' => t('Adjust options for the eCard page'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ch_ecard_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'ch_ecard.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function ch_ecard_theme() {
+  return array(
+    'ch_ecard' => array(
+      'arguments' => array('catalog' => null, 'page' => FALSE),
+      'template' => 'ch-ecard',
+    ),
+    'ch_ecard_item' => array(
+      'arguments' => array('item' => NULL),
+      'template' => 'ch-ecard-item',
+    ),
+    'ch_ecard_items' => array(
+      'arguments' => array('rows' => NULL, 'filtered_path' => 'donate/ecard'),
+      'template' => 'ch-ecard-items',
+    ),
+    'ch_ecard_attributes' => array(
+      'arguments' => array('item' => NULL, 'attributes' => array()),
+      'template' => 'ch-ecard-attributes',
+    ),
+    'ch_ecard_preview' => array(
+      'arguments' => array('item' => NULL, 'attributes' => array()),
+      'template' => 'ch-ecard-preview',
+    ),
+    'ch_ecard_view_card' => array(
+      'arguments' => array('item' => NULL, 'attributes' => array()),
+      'template' => 'ch-ecard-view-card',
+    ),
+    'ch_ecard_email_card' => array(
+      'arguments' => array('content' => '', 'node' => NULL, 'attributes' => array()),
+      'template' => 'ch-ecard-email-card',
+    ),
+  );
+}
+
+function ch_ecard_show() {
+  list($page, $category, $price, $sort) = ch_gift_catalog_get_args(func_get_args());
+  $per_page = 20;
+  
+  $limits = drupal_get_form('ch_ecard_filters', $category);
+  
+  $list = '';
+  $pager = '';
+  $items = ch_ecard_list_items($price, $category, $page, $sort, $per_page);
+  
+  if ( $items['page'] ) {
+    $rows = array();
+    foreach ( $items['page'] as $item ) {
+      $rows[] = theme('ch_ecard_item', $item);
+    }
+    $list = theme('ch_ecard_items', $rows, ch_gift_catalog_filtered_path($price, $category, 'donate/ecard'));
+  } else {
+    $list = '<p class="empty-catalog-listing">'.t('There are no gifts in the programs and price ranges selected. Please change your search above.').'</p>';
+  }
+  
+  $pager = ch_gift_catalog_pager(ch_gift_catalog_sorted_path($price, $category), ceil($items['count']/$per_page), $page);
+  
+  $catalog = new CHGiftCatalog($limits.$list.$pager);
+  $catalog->header = _filter_autop(variable_get('ch_ecard_page_header', ''));
+  $catalog->footer = _filter_autop(variable_get('ch_ecard_page_footer', ''));
+  $catalog->title = variable_get('ch_ecard_page_title', 'eCards');
+  return theme('ch_ecard', $catalog, TRUE);
+}
+
+function ch_ecard_customize( $item ) {
+  $out = '';
+  $attributes = array();
+  if ( $_SESSION['ch_ecard_attributes'] ) {
+    $session_attributes = unserialize($_SESSION['ch_ecard_attributes']);
+    foreach ( $item->attributes as $key => $attribute ) {
+      $attributes[$attribute->name] = $session_attributes[$attribute->aid];
+    }
+    
+    $out .= theme('ch_ecard_preview', $item, $attributes);
+  }
+  $out .= theme('ch_ecard_attributes', $item, $attributes);
+  unset($_SESSION['ch_ecard_attributes']);
+  return $out;
+}
+
+function ch_ecard_customize_ajax( $item ) {
+  // This is Ajax. Print and exit, don't return.
+  print theme('ch_ecard_attributes', $item);
+  
+  // Re-bind date_popup behaviors
+  print '<script type="text/javascript">Drupal.behaviors.date_popup();</script>';
+  exit();
+}
+
+function ch_ecard_filters( &$form_state, $category = 'all' ) {
+  drupal_add_js(drupal_get_path('module', 'ch_gift_catalog').'/scripts/ch_gift_catalog.js');
+  $vocab = reset(taxonomy_get_vocabularies('ecard'));
+  $terms = taxonomy_get_tree($vocab->vid);
+  $category_options = array(
+    'all' => t('Show All Categories'),
+  );
+  foreach ( $terms as $term ) {
+    $category_options[$term->tid] = check_plain($term->name);
+  }
+  if ( !isset($category_options[$category]) ) { $category = 'all'; }
+  $form['category'] = array(
+    '#title' => '',
+    '#type' => 'radios',
+    '#prefix' => t('<p style="margin: 5px 0 7px 12px; font: bold 16px \'Lucida Sans\', \'Lucida Grande\', \'sans serif\'; color: #007AC9;">CHOOSE YOUR CARD</p>'),
+	'#options' => $category_options,
+    '#default_value' => $category,
+    '#theme' => 'ch_gift_catalog_filter_options',
+    '#attributes' => array('class' => 'category'),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filter'),
+  );
+  $form['#id'] = 'ch-gift-catalog-filters';
+  return $form;
+}
+/*
+ * Submit function for ch_ecard_filters
+ */
+function ch_ecard_filters_submit( $form, &$form_state ) {
+  $category = $form_state['values']['category'];
+  $form_state['redirect'] = 'donate/ecard';
+  if ( $category != 'all' ) {
+    $form_state['redirect'] .= '/category/'.$category;
+  }
+}
+
+
+/**
+ * Returns an array of ecard items matching the given parameters
+ */
+function ch_ecard_list_items( $price = 'all', $category = 'all', $page = 0, $sort = array('price', 'ASC'), $number = 4 ) {
+  if($category == 'all') {
+    $sort[0] = 'term_data_name';
+  }  
+  $query = "SELECT node.nid AS nid,
+      uc_products.sell_price AS uc_products_sell_price,
+      node.type AS node_type,
+      node.vid AS node_vid,
+      node.title AS node_title,
+      node_revisions.body AS node_revisions_body,
+      node_revisions.format AS node_revisions_format,
+      term_data.name AS term_data_name,
+      term_data.vid AS term_data_vid,
+      term_data.tid AS term_data_tid,
+      term_data.name AS term_data_name
+    FROM {node} node 
+    LEFT JOIN {uc_products} uc_products ON node.vid = uc_products.vid
+    LEFT JOIN {node_revisions} node_revisions ON node.vid = node_revisions.vid
+    LEFT JOIN {term_node} term_node ON node.vid = term_node.vid
+    LEFT JOIN {term_data} term_data ON term_node.tid = term_data.tid
+    WHERE
+          (node.status <> 0)
+      AND (node.type in ('ecard'))";
+  if ( $category !== 'all' ) {
+    $vocab = reset(taxonomy_get_vocabularies('ecard'));
+    $terms = taxonomy_get_tree($vocab->vid);
+    $category_options = array();
+    foreach ( $terms as $term ) {
+      $category_options[$term->tid] = check_plain($term->name);
+    }
+    if ( isset($category_options[$category]) ) {
+      $query .= "\nAND (term_node.tid = $category)";
+    }
+  }
+  if ( !is_array($sort) || count($sort) < 2 ) {
+    $sort = array("price", "ASC");
+  }
+  if ( $sort[0] == "price" ) {
+    $sort[0] = 'uc_products_sell_price';
+  } elseif ( $sort[0] == "program" || $sort[0] == "category" ) {
+    $sort[0] = 'term_data_name';
+  }
+  $query .= "\nORDER BY ".$sort[0]." ".$sort[1];
+  
+  $result = db_query($query);
+  $items = array();
+  while ( $row = db_fetch_object($result) ) {
+    $items[] = $row;
+  }
+  $display_items = array();
+  $total_num = count($items);
+  for ( $i = $page*$number ; $i < ($page*$number+$number) && $i < $total_num ; $i++ ) {
+    $display_items[] = node_load($items[$i]->nid);
+  }
+  return array('items' => $items, 'page' => $display_items, 'count' => $total_num);
+}
+
+function ch_ecard_preview( $item ) {
+  $session_attributes = unserialize($_SESSION['ch_ecard_attributes']);
+  $attributes = array();
+  foreach ( $item->attributes as $key => $attribute ) {
+    $attributes[$attribute->name] = $session_attributes[$attribute->aid];
+  }
+  unset($_SESSION['ch_ecard_attributes']);
+  
+  return theme('ch_ecard_preview', $item, $attributes);
+}
+
+function template_preprocess_ch_ecard_preview( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_ecard_preview.css');
+  $item = $variables['item'];
+  $attributes = $variables['attributes'];
+  $content = $item->field_html_template[0]['value'];
+  foreach ( $attributes as $key => $value ) {
+    $content = str_replace('['.$key.']', $value, $content);
+  }
+  $variables['content'] = $content;
+  $variables['form'] = theme('uc_product_add_to_cart', $item);
+}
+
+
+function template_preprocess_ch_ecard_item( &$variables ) {
+  //ch_gift_catalog_debug($variables);
+  global $zebra;
+  $variables['zebra'] = ch_gift_catalog_zebra();
+  $item = $variables['item'];
+  $variables['title'] = $item->title;
+  $variables['price'] = '$'.((int)$item->sell_price);
+  $variables['description'] = $item->body;
+  $variables['customize'] = base_path().'donate/ecard/customize/'.$item->nid;
+  $variables['image'] = '';
+  if ( $item->field_image_cache[0]['filepath'] ) {
+    //ch_gift_catalog_debug($item);
+    $variables['image'] = theme('imagecache', 'ecard', $item->field_image_cache[0]['filepath'], $item->field_image_cache[0]['data']['alt']);
+    $variables['fullimage'] = base_path().$item->field_image_cache[0]['filepath'];
+    if ( $variables['zebra'] == 'even' ) {
+      $variables['enlarge'] = '<img alt="Enlarge" src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/enlarge-blue.gif'.'" />';
+    } else {
+      $variables['enlarge'] = '<img alt="Enlarge" src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/enlarge-green.gif'.'" />';
+    }
+  }
+  if ( $term = reset($item->taxonomy) ) {
+    $variables['program'] = $term->name;
+  }
+  
+  // the page won't display the form, but building it will pre-load
+  // some scripts used by the Ajaxed-in form
+  $variables['form'] = theme('uc_product_add_to_cart', $item);
+  $variables['id'] = $item->nid;
+  
+  drupal_add_js(array('ch_ecard' => array('path' => base_path().$_GET['q'])), 'setting');
+  $variables['path'] = base_path().$_GET['q'];
+}
+
+
+function template_preprocess_ch_ecard_items(&$variables) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+  $base_url = $variables['filtered_path'];
+  $asc_img = '<img src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/sort-asc.gif'.'" alt="ascending" title="sort ascending" />';
+  $desc_img = '<img src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/sort-desc.gif'.'" alt="descending" title="sort descending" />';
+  $variables['sort']['price']['asc'] = l($asc_img,$base_url, array('html' => TRUE));
+  $variables['sort']['price']['desc'] = l($desc_img,$base_url.'/sort/price/d', array('html' => TRUE));
+  $variables['sort']['category']['asc'] = l($asc_img,$base_url.'/sort/category/a', array('html' => TRUE));
+  $variables['sort']['category']['desc'] = l($desc_img,$base_url.'/sort/category/d', array('html' => TRUE));
+}
+
+function template_preprocess_ch_ecard_attributes(&$variables) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+  $item = $variables['item'];
+  $variables['form'] = theme('uc_product_add_to_cart', $item);
+  $variables['image'] = '';
+  if ( $item->field_image_cache[0]['filepath'] ) {
+    $variables['image'] = theme('imagecache', 'ecard', $item->field_image_cache[0]['filepath'], $item->field_image_cache[0]['data']['alt']);
+    $variables['fullimage'] = base_path().$item->field_image_cache[0]['filepath'];
+  }
+}
+
+function ch_ecard_form_alter( &$form, $form_state, $form_id ) {
+  if ( strpos($form_id, 'add_to_cart_form') && isset($form['attributes']) ) {
+    foreach ( $form['#parameters'][2]->attributes as $key => $att ) {
+      $form['attributes'][$key]['#title'] = $att->default_label;
+      if ( $form['attributes'][$key]['#title'] == 'Your Message' ) {
+        $form['attributes'][$key]['#type'] = 'textarea';
+      }
+      if ( $form['attributes'][$key]['#title'] == 'When would you like your card sent?' ) {
+        $form['attributes'][$key]['#type'] = 'date_popup';
+        $form['attributes'][$key]['#date_format'] = 'Y-m-d g:ia';
+        $form['attributes'][$key]['#date_label_position'] = 'within';
+        $form['attributes'][$key]['#date_increment'] = 1;
+        $form['attributes'][$key]['#date_year_range'] = '0:+1';
+        $form['attributes'][$key]['#default_value'] = date('Y-m-d g:ia');
+      }
+      if ( arg(0) == 'donate' && arg(1) == 'ecard' && arg(2) == 'customize' && arg(4) == 'ajax' ) {
+        $form['#action'] = base_path().'donate/ecard/customize/'.$form['nid']['#value'];
+      }
+    }
+    
+    if ( $_SESSION['ch_ecard_attributes'] ) {
+      $attributes = unserialize($_SESSION['ch_ecard_attributes']);
+      foreach ( $attributes as $key => $value ) {
+        $form['attributes'][$key]['#default_value'] = $value;
+      }
+    }
+    $form['qty']['#type'] = 'hidden';
+    $form['preview'] = array(
+      '#type' => 'submit',
+      '#value' => 'Preview',
+      '#weight' => 10,
+    );
+    $form['submit']['#weight'] = 11;
+    $form['#validate'][] = 'ch_ecard_add_to_cart_validate';
+    $form['#submit'] = array('ch_ecard_add_to_cart_submit');
+  } elseif ( $form_id == 'uc_cart_view_form' ) {
+    $form['continue_shopping']['#value'] = l(t('Shop for eCards'), 'donate/ecard', array('attributes'=> array('class' => 'shop-ecards'))).$form['continue_shopping']['#value'];
+  }
+}
+
+function ch_ecard_add_to_cart_validate( &$form, &$form_state ) {
+  foreach ( $form_state['clicked_button']['#post']['attributes'] as $key => $value ) {
+    if ( is_array($value) ) {
+      $form_state['values']['attributes'][$key] = implode(' ', $value);
+    }
+  }
+  
+  /**
+   * Author:	Richard Castera
+   * Date:		12/10/2009
+   * Comments:	Used to impose a 215 character limit in the e-card message.
+   **/ 
+  if(((int)strlen($form_state['values']['attributes'][5])) > 215) {
+    form_set_error('attributes[5]', 'There is a 215 character limit on eCard messages.');
+    return false;
+  }
+}
+
+function ch_ecard_add_to_cart_submit( $form, &$form_state ) {
+  if ( $form_state['values']['op'] == 'Preview' ) {
+    $_SESSION['ch_ecard_attributes'] = serialize($form_state['values']['attributes']);
+    unset($form_state['redirect']);
+    $form_state['redirect'] = 'donate/ecard/customize/'.$form_state['values']['nid'];
+  } else {
+    $form_state['redirect'] = uc_cart_add_item($form_state['values']['nid'], $form_state['values']['qty'],  module_invoke_all('add_to_cart_data', $form_state['values']));
+  }
+}
+
+function ch_ecard_view_card( $cid ) {
+  $result = db_query("SELECT ec.*, op.order_id FROM {ch_ecard} ec LEFT JOIN {uc_order_products} op ON ec.opid=op.order_product_id WHERE ec.opid=%d", $cid);
+  
+  if ( !$product = db_fetch_object($result) ) {
+    drupal_set_message("An invalid eCard ID was given.", 'error');
+    drupal_goto('donate/ecard');
+    return;
+  }
+  $order = uc_order_load($product->order_id);
+  if ( $order->order_status != 'completed' ) {
+    drupal_set_message("This order is not yet complete.", 'error');
+    drupal_goto('donate/ecard');
+    return;
+  }
+  $node = node_load($product->nid);
+  if ( $node->type != 'ecard' ) {
+    drupal_set_message("An invalid eCard ID was given.", 'error');
+    drupal_goto('donate/ecard');
+    return;
+  }
+  
+  // At this point we have a valid eCard that has been paid for
+  return theme('ch_ecard_view_card', $node, $product);
+}
+function template_preprocess_ch_ecard_view_card( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_ecard_preview.css');
+  $item = $variables['item'];
+  $attributes = $variables['attributes'];
+  $content = $item->field_html_template[0]['value'];
+  foreach ( $attributes as $key => $value ) {
+    $content = str_replace('['.$key.']', $value, $content);
+  }
+  $variables['content'] = $content;
+}
+
+/**
+ * Implementation of hook_cron()
+ */
+function ch_ecard_cron() {
+  ch_ecard_send_ecards();
+}
+
+function ch_ecard_send_ecards() {
+  $result = db_query("SELECT * FROM {ch_ecard} WHERE send_date<%d AND sent=0", time());
+  while ( $row = db_fetch_object($result) ) {
+    ch_ecard_send_ecard($row);
+    db_query("UPDATE {ch_ecard} SET sent=%d WHERE opid=%d", time(), $row->opid);
+  }
+}
+
+function ch_ecard_send_ecard( $row ) {
+  $node = node_load($row->nid);
+  $template = $node->field_html_template[0]['value'];
+  
+  foreach ( $row as $key => $value ) {
+    $template = str_replace('['.$key.']', $value, $template);
+  }
+  
+  $params['message'] = theme('ch_ecard_email_card', $template, $node, $row);
+  $params['sender_email'] = $row->sender_email;
+  $params['sender_name'] = $row->sender_name;
+  $params['recipient_email'] = $row->recipient_email;
+  $params['recipient_name'] = $row->recipient_name;
+  $params['node'] = $node;
+  drupal_mail('ch_ecard', 'ecard', $row->recipient_email, language_default(), $params);
+}
+
+function ch_ecard_mail( $key, &$message, $params ) {
+  switch ( $key ) {
+    case 'ecard':
+      $message['subject'] = t('!title from !sender_name', array('!title' => $params['node']->title, '!sender_name' => $params['sender_name']));
+      $message['body'][] = $params['message'];
+      $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed';
+      break;
+  }
+}
+
+function ch_ecard_order( $op, &$arg1, $arg2 ) {
+  if ( $op != 'update' || $arg2 != 'completed' ) {
+    return;
+  }
+  
+  $nids = array();
+  $result = db_query("SELECT nid FROM {node} WHERE status <> 0 AND type='%s'", 'ecard');
+  while( $row = db_fetch_object($result) ) {
+    $nids[] = $row->nid;
+  }
+  if ( !$nids ) { return; }
+  
+  foreach ( $arg1->products as $product ) {
+    if ( in_array($product->nid, $nids) ) {
+      $row['opid'] = $product->order_product_id;
+      $row['nid'] = $product->nid;
+      
+      $product->attributes = ch_ecard_get_named_attributes($product->data['attributes'], $product->nid);
+      $row['sender_email'] = $product->attributes['sender_email'];
+      $row['sender_name'] = $product->attributes['sender_name'];
+      $row['recipient_email'] = $product->attributes['recipient_email'];
+      $row['recipient_name'] = $product->attributes['recipient_name'];
+      $row['message'] = $product->attributes['message'];
+      $row['send_date'] = strtotime($product->attributes['send_date']);
+      
+      $row['sent'] = 0;
+      
+      ch_ecard_new_row($row);
+    }
+  }
+}
+function ch_ecard_get_named_attributes($attributes, $nid = 0) {
+  $out = array();
+  foreach ( $attributes as $key => $value ) {
+    if ( is_array($value) ) {
+      $value = reset($value);
+    }
+    if ( is_numeric($key) ) {
+      $match = db_result(db_query("SELECT name FROM {uc_attributes} WHERE aid=%d", $key));
+      $out[$match] = $value;
+    } else {
+      $match = db_result(db_query("SELECT DISTINCT a.name FROM {uc_attributes} a LEFT JOIN {uc_product_attributes} pa ON a.aid=pa.aid WHERE (pa.label='%s' AND pa.nid=%d) OR a.name='%s'", $key, $nid, $key ));
+      if ( $match ) {
+        $out[$match] = $value;
+      } else {
+        $out[$key] = $value;
+      }
+    }
+  }
+  return $out;
+}
+
+function ch_ecard_new_row( $values ) {
+  if ( $values['opid'] ) {
+    $result = db_query("SELECT * FROM ch_ecard WHERE opid=%d", $values['opid']);
+    if ( $row = db_fetch_object($result) ) {
+      if ( $row->sent > 0 ) {
+        return;
+      } else {
+        db_query("DELETE FROM ch_ecard WHERE opid=%d", $values['opid']);
+      }
+    }
+    db_query("INSERT INTO {ch_ecard} (opid, nid, sender_email, sender_name, recipient_email, recipient_name, message, send_date, sent) VALUES (%d, %d, '%s', '%s', '%s', '%s', '%s', %d, %d)", $values['opid'], $values['nid'], $values['sender_email'], $values['sender_name'], $values['recipient_email'], $values['recipient_name'], $values['message'], $values['send_date'], $values['sent']);
+  }
+}
+
+
+function template_preprocess_ch_ecard( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+  $catalog = $variables['catalog'];
+  //ch_gift_catalog_debug(array_keys($variables));
+  $variables['title'] = $catalog->title;
+  if ( $variables['page'] != 0 ) {
+    drupal_set_title($catalog->title);
+  }
+  $variables['content'] = $catalog->header.$catalog->body.$catalog->footer;
+}
+
+function _ch_ecard_find_missing_data() {
+  $result = db_query("SELECT op.order_product_id, op.data, op.nid FROM {uc_order_products} op INNER JOIN {ch_ecard} c ON op.order_product_id=c.opid WHERE c.send_date=0 AND c.recipient_email=''");
+  while ( $row = db_fetch_object($result) ) {
+    $data = unserialize($row->data);
+    if ( $data['attributes'] ) {
+      $attributes = ch_ecard_get_named_attributes($data['attributes'], $row->nid);
+      $params = array(
+        $attributes['sender_name'],
+        $attributes['sender_email'],
+        $attributes['recipient_name'],
+        $attributes['recipient_email'],
+        $attributes['message'],
+        strtotime($attributes['send_date']),
+        $row->order_product_id,
+      );
+      db_query("UPDATE {ch_ecard} SET sender_name='%s', sender_email='%s', recipient_name='%s', recipient_email='%s', message='%s', send_date=%d, sent=0 WHERE opid=%d", $params);
+    }
+  }
+}

@@ -1,0 +1,507 @@
+<?php
+// $Id$
+function ch_gift_catalog_debug($variable, $type = 'status') {
+  drupal_set_message("<pre>".htmlspecialchars(print_r($variable, true))."</pre>", $type);
+}
+/**
+ * Implementation of hook_menu()
+ */
+function ch_gift_catalog_menu() {
+  $items['donate/gift-catalog'] = array(
+    'title' => t('Gift Catalog'),
+    'page callback' => 'ch_gift_catalog_show',
+    'access arguments' => array('access content'),
+  );
+  $items['admin/settings/donate/gift-catalog'] = array(
+    'title' => t('Gift Catalog Settings'),
+    'description' => t('Adjust options for the gift catalog page'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ch_gift_catalog_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'ch_gift_catalog.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function ch_gift_catalog_theme() {
+  return array(
+    'ch_gift_catalog_item' => array(
+      'arguments' => array('item' => NULL),
+      'template' => 'ch-gift-catalog-item',
+    ),
+    'ch_gift_catalog_items' => array(
+      'arguments' => array('rows' => NULL, 'filtered_path' => 'donate/gift-catalog'),
+      'template' => 'ch-gift-catalog-items',
+    ),
+    'ch_gift_catalog_filter_options' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'ch_gift_catalog_pager' => array(
+      'arguments' => array('links' => array()),
+      'template' => 'ch-gift-catalog-pager',
+    ),
+    'ch_gift_catalog' => array(
+      'arguments' => array('catalog' => null, 'page' => FALSE),
+      'template' => 'ch-gift-catalog',
+    ),
+  );
+}
+
+function ch_gift_catalog_filtered_path( $price = 'all', $category = 'all', $url = '' ) {
+  if ( $url == '' && arg(1) == 'ecard' ) {
+    $url = 'donate/ecard';
+  } elseif ( $url == '' ) {
+    $url = 'donate/gift-catalog';
+  }
+  if ( $price != 'all' ) {
+    $url .= '/price/'.$price;
+  }
+  if ( $category != 'all' ) {
+    $url .= '/program/'.$category;
+  }
+  return $url;
+}
+
+function ch_gift_catalog_sorted_path( $price = 'all', $category = 'all', $field = '', $order = 'asc' ) {
+  $url = ch_gift_catalog_filtered_path($price, $category);
+  if ( $field ) {
+    $url .= '/sort/'.$field.'/'.substr($order, 0, 1);
+  }
+  return $url;
+}
+
+/**
+ * Builds the gift catalog page
+ */
+function ch_gift_catalog_show(  ) {
+  list($page, $category, $price, $sort) = ch_gift_catalog_get_args(func_get_args());
+  $per_page = 20;
+  
+  $limits = drupal_get_form('ch_gift_catalog_filters', $price, $category);
+  
+  $items = ch_gift_catalog_list_items($price, $category, $page, $sort, $per_page);
+  if ( $items['page'] ) {
+    $rows = array();
+    foreach ( $items['page'] as $item ) {
+      $rows[] = theme('ch_gift_catalog_item', $item);
+    }
+    $list = theme('ch_gift_catalog_items', $rows, ch_gift_catalog_filtered_path($price, $category));
+  } else {
+    $list = '<p class="empty-catalog-listing">'.t('There are no gifts in the programs and price ranges selected. Please change your search above.').'</p>';
+  }
+  
+  $pager = ch_gift_catalog_pager(ch_gift_catalog_sorted_path($price, $category), ceil($items['count']/$per_page), $page);
+  
+  $catalog = new CHGiftCatalog($limits.$list.$pager);
+  
+  drupal_set_title($catalog->title);
+  
+  return theme('ch_gift_catalog', $catalog, TRUE);
+}
+
+function ch_gift_catalog_get_args( $args = array() ) {
+  $page = 0;
+  $category = 'all';
+  $price = 'all';
+  $sort = array( 'price', 'ASC' );
+  for ( $i = 0, $size = count($args) ; $i < $size ; $i++ ) {
+    switch ( $args[$i] ) {
+      case "page":
+        if ( is_numeric($args[$i+1]) ) {
+          $page = (int)$args[$i+1];
+          $i++;
+        }
+        break;
+      case "program":
+      case "category":
+        if ( is_numeric($args[$i+1]) ) {
+          $category = (int)$args[$i+1];
+          $i++;
+        }
+        break;
+      case "price":
+        if ( is_numeric($args[$i+1]) ) {
+          $price = (int)$args[$i+1];
+          $i++;
+        }
+        break;
+      case "sort":
+        if ( $args[$i+1] == "price" || $args[$i+1] == "program" || $args[$i+1] == "category" ) {
+          $sort[0] = $args[$i+1];
+        }
+        if ( $args[$i+2] == 'd' ) {
+          $sort[1] = 'DESC';
+        }
+        $i = $i+2;
+        break;
+    }
+  }
+  return array($page, $category, $price, $sort);
+}
+
+function ch_gift_catalog_pager( $base_path, $page_count = 1, $current_page = 0 ) {
+  if ( $page_count < 2 ) { return ''; }
+  $links = array();
+  if ( $current_page > 0 ) {
+    $path = $base_path;
+    if ( $current_page > 1 ) { $path .= '/page/'.($current_page-1); }
+    $links[] = array(
+      'class' => 'prev',
+      'label' => t('Previous Page'),
+      'url' => url($path),
+      'link' => l(t('Previous Page'), $path),
+    );
+  }
+  for ( $i = 0 ; $i < $page_count ; $i++ ) {
+    $path = $base_path;
+    if ( $i > 0 ) { $path .= '/page/'.($i); }
+    $link = array(
+      'label' => ($i+1),
+      'url' => url($path),
+      'link' => l(($i+1), $path),
+    );
+    if ( $i == $current_page ) {
+      $link['class'] = 'loc';
+    }
+    $links[] = $link;
+  }
+  if ( $current_page+1 < $page_count ) {
+    $path = $base_path.'/page/'.($current_page+1);
+    $links[] = array(
+      'class' => 'next',
+      'label' => t('Next Page'),
+      'url' => url($path),
+      'link' => l(t('Next Page'), $path),
+    );
+  }
+  return theme('ch_gift_catalog_pager', $links);
+}
+
+/**
+ * Returns an array of gift catalog items matching the given parameters
+ */
+function ch_gift_catalog_list_items( $price = 'all', $category = 'all', $page = 0, $sort = array('price', 'ASC'), $number = 4 ) {
+  $query = "SELECT node.nid AS nid,
+      uc_products.sell_price AS uc_products_sell_price,
+      node.type AS node_type,
+      node.vid AS node_vid,
+      node.title AS node_title,
+      node_revisions.body AS node_revisions_body,
+      node_revisions.format AS node_revisions_format,
+      term_data.name AS term_data_name,
+      term_data.vid AS term_data_vid,
+      term_data.tid AS term_data_tid,
+      term_data.name AS term_data_name
+    FROM {node} node 
+    LEFT JOIN {uc_products} uc_products ON node.vid = uc_products.vid
+    LEFT JOIN {node_revisions} node_revisions ON node.vid = node_revisions.vid
+    LEFT JOIN {term_node} term_node ON node.vid = term_node.vid
+    LEFT JOIN {term_data} term_data ON term_node.tid = term_data.tid
+    WHERE
+          (node.status <> 0)
+      AND (node.type in ('gift_item'))";
+  if ( $category !== 'all' ) {
+    $vocab = reset(taxonomy_get_vocabularies('gift_item'));
+    $terms = taxonomy_get_tree($vocab->vid);
+    $category_options = array();
+    foreach ( $terms as $term ) {
+      $category_options[$term->tid] = check_plain($term->name);
+    }
+    if ( isset($category_options[$category]) ) {
+      $query .= "\nAND (term_node.tid = $category)";
+    }
+  }
+  if ( $price !== 'all' ) {
+    $price_options = array(
+      0 => array(0,25),
+      25 => array(25,100),
+      100 => array(100,500),
+      500 => array(500,1000),
+      1000 => array(1000),
+    );
+    if ( isset($price_options[$price]) ) {
+      $query .= "\nAND (uc_products.sell_price >= ".$price_options[$price][0].")";
+      if ( count($price_options[$price]) > 1 ) {
+        $query .= "\nAND (uc_products.sell_price < ".$price_options[$price][1].")";
+      }
+    }
+  }
+  if ( !is_array($sort) || count($sort) < 2 ) {
+    $sort = array("price", "ASC");
+  }
+  if ( $sort[0] == "price" ) {
+    $sort[0] = 'uc_products_sell_price';
+  } elseif ( $sort[0] == "program" ) {
+    $sort[0] = 'term_data_name';
+  }
+  $query .= "\nORDER BY ".$sort[0]." ".$sort[1];
+  
+  $result = db_query($query);
+  $items = array();
+  $keys = array();
+  while ( $row = db_fetch_object($result) ) {
+    if ( !(in_array($row->nid, $keys)) ) {
+      $keys[] = $row->nid;
+      $items[] = $row;
+    }
+  }
+  $display_items = array();
+  $total_num = count($items);
+  for ( $i = $page*$number ; $i < ($page*$number+$number) && $i < $total_num ; $i++ ) {
+    $display_items[] = node_load($items[$i]->nid);
+  }
+  return array('items' => $items, 'page' => $display_items, 'count' => $total_num);
+}
+
+/**
+ * Implementation of hook_block()
+ */
+/*function ch_gift_catalog_block( $op = 'list', $delta = 0, $edit = array() ) {
+  switch($op) {
+    case 'list':
+      $blocks[0]['info'] = t('Gift Catalog');
+      $blocks[0]['cache'] = BLOCK_NO_CACHE;
+      return $blocks;
+    case 'view':
+      break;
+  }
+}*/
+
+/**
+ * Creates a form for limiting results
+ */
+function ch_gift_catalog_filters( &$form_state, $price = 'all', $category = 'all' ) {
+  drupal_add_js(drupal_get_path('module', 'ch_gift_catalog').'/scripts/ch_gift_catalog.js');
+  $price_options = array(
+    'all' => t('Show All Prices'),
+    '0' => '$0 - $24',
+    '25' => '$25 - $99',
+    '100' => '$100 - $499',
+    '500' => '$500 - $999',
+    '1000' => '$1000+',
+  );
+  if ( !isset($price_options[$price]) ) { $price = 'all'; }
+
+ $form['price'] = array(
+    '#title' => '',
+    '#type' => 'radios',
+    '#options' => $price_options,
+    '#default_value' => $price,
+    '#theme' => 'ch_gift_catalog_filter_options',
+    '#attributes' => array('class' => 'price'),
+  );
+  $vocab = reset(taxonomy_get_vocabularies('gift_item'));
+  $terms = taxonomy_get_tree($vocab->vid);
+  $category_options = array(
+    'all' => t('Show All Programs'),
+  );
+  foreach ( $terms as $term ) {
+    $category_options[$term->tid] = check_plain($term->name);
+  }
+  if ( !isset($category_options[$category]) ) { $category = 'all'; }
+  $form['category'] = array(
+    '#title' => '',
+    '#type' => 'radios',
+    '#options' => $category_options,
+    '#default_value' => $category,
+    '#theme' => 'ch_gift_catalog_filter_options',
+    '#attributes' => array('class' => 'category'),
+  );
+  
+$form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filter'),
+  );
+
+  return $form;
+}
+
+/**
+ * Re-implement drupal_render() so radio buttons can be grouped in trios
+ */
+function theme_ch_gift_catalog_filter_options( &$elements ) {  
+  if (!isset($elements) || (isset($elements['#access']) && !$elements['#access'])) {
+    return NULL;
+  }
+
+  // If the default values for this element haven't been loaded yet, populate
+  // them.
+  if (!isset($elements['#defaults_loaded']) || !$elements['#defaults_loaded']) {
+    if ((!empty($elements['#type'])) && ($info = _element_info($elements['#type']))) {
+      $elements += $info;
+    }
+  }
+
+  // Make any final changes to the element before it is rendered. This means
+  // that the $element or the children can be altered or corrected before the
+  // element is rendered into the final text.
+  if (isset($elements['#pre_render'])) {
+    foreach ($elements['#pre_render'] as $function) {
+      if (function_exists($function)) {
+        $elements = $function($elements);
+      }
+    }
+  }
+
+  $content = '';
+  // Either the elements did not go through form_builder or one of the children
+  // has a #weight.
+  if (!isset($elements['#sorted'])) {
+    uasort($elements, "element_sort");
+  }
+  $elements += array('#title' => NULL, '#description' => NULL);
+  if ( !isset($elements['#children']) ) {
+    $children = element_children($elements);    
+    // Render all the children that use a theme function.
+    if (isset($elements['#theme']) && empty($elements['#theme_used'])) {
+      $elements['#theme_used'] = TRUE;
+
+      $previous = array();
+      foreach (array('#value', '#type', '#prefix', '#suffix') as $key) {
+        $previous[$key] = isset($elements[$key]) ? $elements[$key] : NULL;
+      }
+      // If we rendered a single element, then we will skip the renderer.
+      if (empty($children)) {
+        $elements['#printed'] = TRUE;
+      }
+      else {
+        $elements['#value'] = '';
+      }
+      $elements['#type'] = 'markup';
+
+      unset($elements['#prefix'], $elements['#suffix']);
+      $content = theme($elements['#theme'], $elements);
+
+      foreach (array('#value', '#type', '#prefix', '#suffix') as $key) {
+        $elements[$key] = isset($previous[$key]) ? $previous[$key] : NULL;
+      }
+    }
+    // Render each of the children using drupal_render and concatenate them.
+    if (!isset($content) || $content === '') {
+      $count = 0;
+      $field_group = '';
+      $first = " radio-group-first";
+      foreach ($children as $key) {
+        $field_group .= drupal_render($elements[$key]);
+        if ( $count == 0 || $count%3 == 0 ) {
+          $content .= '<div class="radio-group'.$first.'">'.$field_group.'</div>';
+          $field_group = '';
+          $first = '';
+        }
+        $count++;
+      }
+      if ( $field_group != '' ) {
+        $content .= '<div class="radio-group">'.$field_group.'</div>';
+        $field_group = '';
+      }
+    }
+  }
+  if (isset($content) && $content !== '') {
+    $elements['#children'] = $content;
+  }
+
+  // Until now, we rendered the children, here we render the element itself
+  if (!isset($elements['#printed'])) {
+    $content = theme(!empty($elements['#type']) ? $elements['#type'] : 'markup', $elements);
+    $elements['#printed'] = TRUE;
+  }
+  if (isset($content) && $content !== '') {
+    // Filter the outputted content and make any last changes before the
+    // content is sent to the browser. The changes are made on $content
+    // which allows the output'ed text to be filtered.
+    if (isset($elements['#post_render'])) {
+      foreach ($elements['#post_render'] as $function) {
+        if (function_exists($function)) {
+          $content = $function($content, $elements);
+        }
+      }
+    }
+    $prefix = isset($elements['#prefix']) ? $elements['#prefix'] : '';
+    $suffix = isset($elements['#suffix']) ? $elements['#suffix'] : '';
+    return $prefix . $content . $suffix;
+  }
+
+}
+
+/**
+ * Submit function for ch_gift_catalog_filters
+ */
+function ch_gift_catalog_filters_submit( $form, &$form_state ) {
+  //ch_gift_catalog_debug($form);
+  $price = $form_state['values']['price'];
+  $category = $form_state['values']['category'];
+  $form_state['redirect'] = 'donate/gift-catalog';
+  if ( $price != 'all' ) {
+    $form_state['redirect'] .= '/price/'.$price;
+  }
+  if ( $category != 'all' ) {
+    $form_state['redirect'] .= '/program/'.$category;
+  }
+}
+
+function template_preprocess_ch_gift_catalog_items(&$variables) {
+  $base_url = $variables['filtered_path'];
+  $asc_img = '<img src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/sort-asc.gif'.'" alt="ascending" title="sort ascending" />';
+  $desc_img = '<img src="'.base_path().drupal_get_path('module', 'ch_gift_catalog').'/images/sort-desc.gif'.'" alt="descending" title="sort descending" />';
+  $variables['sort']['price']['asc'] = l($asc_img,$base_url, array('html' => TRUE));
+  $variables['sort']['price']['desc'] = l($desc_img,$base_url.'/sort/price/d', array('html' => TRUE));
+  $variables['sort']['program']['asc'] = l($asc_img,$base_url.'/sort/program/a', array('html' => TRUE));
+  $variables['sort']['program']['desc'] = l($desc_img,$base_url.'/sort/program/d', array('html' => TRUE));
+}
+
+function template_preprocess_ch_gift_catalog_item( &$variables ) {
+  //ch_gift_catalog_debug($variables);
+  global $zebra;
+  $variables['zebra'] = ch_gift_catalog_zebra();
+  $item = $variables['item'];
+  $variables['title'] = $item->title;
+  $variables['price'] = '$'.(number_format((int)$item->sell_price));
+  $variables['description'] = $item->body;
+  $variables['add_to_cart'] = theme('uc_product_add_to_cart', $item);
+  $variables['image'] = '';
+  if ( $item->field_image_cache[0]['filepath'] ) {
+    $variables['image'] = '<img src="'.url($item->field_image_cache[0]['filepath']).'" alt="'.$item->field_image_cache[0]['data']['alt'].'" />';
+  }
+  foreach ( $item->taxonomy as $term ) {
+    if ( $term->vid == 1 ) {
+      $variables['program'] = $term->name;
+      break;
+    }
+  }
+}
+
+function ch_gift_catalog_zebra() {
+  static $zebra;
+  if ( $zebra == 'odd' ) { $zebra = 'even'; }
+  else { $zebra = 'odd'; }
+  return $zebra;
+}
+
+function template_preprocess_ch_gift_catalog( &$variables ) {
+  drupal_add_css(drupal_get_path('module', 'ch_gift_catalog').'/css/ch_gift_catalog.css');
+  $catalog = $variables['catalog'];
+  //ch_gift_catalog_debug(array_keys($variables));
+  $variables['title'] = $catalog->title;
+  if ( $variables['page'] != 0 ) {
+    drupal_set_title($catalog->title);
+  }
+  $variables['content'] = $catalog->header.$catalog->body.$catalog->footer;
+}
+
+class CHGiftCatalog {
+  var $title;
+  var $header;
+  var $body;
+  var $footer;
+  
+  function __construct($body) {
+    $this->body = $body;
+    $this->title = variable_get('ch_gift_catalog_page_title', t('Gift Catalog'));
+    $this->header = _filter_autop(variable_get('ch_gift_catalog_page_header', ''));
+    $this->footer = _filter_autop(variable_get('ch_gift_catalog_page_footer', ''));
+  }
+}
